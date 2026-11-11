@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: gecm-office-portal
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci && npm ci --prefix server && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MONGO_URI
+        sync: false
