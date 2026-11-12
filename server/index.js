@@ -61,14 +61,15 @@ app.use(express.json({ limit: '8mb' }));
 // Connect to MongoDB
 const initializeDatabase = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/major');
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/major');
     console.log('✅ Connected to MongoDB successfully');
     await seedSettings();
     await migrateLegacyLateralStudents();
   } catch (err) {
     if (process.env.NODE_ENV === 'production') throw err;
-    console.warn('⚠️ MongoDB is not available. The app will continue in fallback/mock mode. Start MongoDB to enable database-backed features.');
-    console.warn(err.message || err);
+    console.warn('⚠️ MongoDB connection attempt failed: ' + (err.message || err));
+    console.warn('Will retry MongoDB connection in 5 seconds...');
+    setTimeout(initializeDatabase, 5000);
   }
 };
 initializeDatabase().catch((error) => {
