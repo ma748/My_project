@@ -331,7 +331,9 @@ export default function StudentManagement() {
         region: ['region', 'ruralurban'],
         feecollected: ['feecollected', 'amountpaid', 'feespaid'],
         diplomamarks: ['diplomamarks', 'diplomatotalmarks', 'diplomapercentage'],
-        lateralentry: ['lateralentry', 'entrytype', 'islateral']
+        lateralentry: ['lateralentry', 'entrytype', 'islateral'],
+        admissionquota: ['admissionquota', 'quota'],
+        admissiontype: ['admissiontype', 'entrytype']
       };
 
       const parseDate = (raw) => {
@@ -590,60 +592,94 @@ export default function StudentManagement() {
       toast.error(error.message || 'Could not read this Excel file');
     }
   };
+
   const importStudents = async () => {
     setImporting(true);
-    let added = 0;
-    let updated = 0;
-    const failures = [];
-    const failedRows = [];
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
-    const keepProvidedFields = (section = {}) => Object.fromEntries(Object.entries(section).filter(([, value]) => value !== '' && value !== null && value !== undefined && !(typeof value === 'number' && Number.isNaN(value))));
-    for (let index = 0; index < importRows.length; index += 1) {
-      const row = importRows[index];
-      try {
-        await axios.post('/api/office/students', row, { headers });
-        added += 1;
-      } catch (error) {
-        const reason = error.response?.data?.error || 'registration failed';
-        let existing = null;
-        if (/already exists|already in use/i.test(reason)) {
-          const searchValue = row.personalDetails.cetNumber || row.studentId;
-          if (searchValue) {
+
+    try {
+      // 1. Fast bulk import endpoint
+      const response = await axios.post('/api/office/students/bulk', { students: importRows }, { headers });
+      const { added = 0, updated = 0, failures = [] } = response.data || {};
+      setImporting(false);
+
+      if (added || updated) {
+        toast.success(`${added} new student${added === 1 ? '' : 's'} imported; ${updated} existing student${updated === 1 ? '' : 's'} updated`);
+        fetchStudents();
+      }
+
+      if (failures.length) {
+        toast.error(`${failures.length} student${failures.length === 1 ? '' : 's'} failed: ${failures[0]}`, { duration: 6000 });
+      } else {
+        setShowImportModal(false);
+        setImportRows([]);
+      }
+    } catch (bulkError) {
+      // 2. Fallback to individual request loop if bulk endpoint fails
+      let added = 0;
+      let updated = 0;
+      const failures = [];
+      const failedRows = [];
+      const keepProvidedFields = (section = {}) => Object.fromEntries(
+        Object.entries(section).filter(([, value]) => value !== '' && value !== null && value !== undefined && !(typeof value === 'number' && Number.isNaN(value)))
+      );
+
+      for (let index = 0; index < importRows.length; index += 1) {
+        const row = importRows[index];
+        try {
+          await axios.post('/api/office/students', row, { headers });
+          added += 1;
+        } catch (error) {
+          const reason = error.response?.data?.error || 'registration failed';
+          let existing = null;
+          if (/already exists|already in use/i.test(reason)) {
+            const searchValue = row.personalDetails?.cetNumber || row.studentId;
+            if (searchValue) {
+              try {
+                const searchRes = await axios.get('/api/office/students', { headers, params: { search: searchValue } });
+                existing = searchRes.data.find((student) =>
+                  String(student.studentId || '').toLowerCase() === String(row.studentId).toLowerCase() ||
+                  String(student.personalDetails?.cetNumber || '').toLowerCase() === String(row.personalDetails?.cetNumber || '').toLowerCase()
+                );
+              } catch { /* Continue on search failure */ }
+            }
+          }
+          if (existing?._id) {
             try {
-              const response = await axios.get('/api/office/students', { headers, params: { search: searchValue } });
-              existing = response.data.find((student) => String(student.studentId || '').toLowerCase() === String(row.studentId).toLowerCase() || String(student.personalDetails?.cetNumber || '').toLowerCase() === String(row.personalDetails.cetNumber).toLowerCase());
-            } catch { /* Keep the duplicate as a reported failure when it cannot be matched. */ }
+              const changes = {
+                personalDetails: keepProvidedFields(row.personalDetails),
+                familyDetails: keepProvidedFields(row.familyDetails),
+                academicDetails: keepProvidedFields(row.academicDetails),
+                contactDetails: keepProvidedFields(row.contactDetails),
+                documents: keepProvidedFields(row.documents)
+              };
+              await axios.put(`/api/office/students/${existing._id}`, changes, { headers });
+              updated += 1;
+              continue;
+            } catch (updateError) {
+              failures.push(`Row ${index + 2}: ${updateError.response?.data?.error || 'could not update student'}`);
+              failedRows.push(row);
+              continue;
+            }
           }
+          failures.push(`Row ${index + 2}: ${reason}`);
+          failedRows.push(row);
         }
-        if (existing?._id) {
-          try {
-            const changes = {
-              personalDetails: keepProvidedFields(row.personalDetails),
-              familyDetails: keepProvidedFields(row.familyDetails),
-              academicDetails: keepProvidedFields(row.academicDetails),
-              contactDetails: keepProvidedFields(row.contactDetails),
-              documents: keepProvidedFields(row.documents)
-            };
-            await axios.put(`/api/office/students/${existing._id}`, changes, { headers });
-            updated += 1;
-            continue;
-          } catch (updateError) {
-            failures.push(`Row ${index + 2}: ${updateError.response?.data?.error || 'could not update the existing student'}`);
-            failedRows.push(row);
-            continue;
-          }
-        }
-        failures.push(`Row ${index + 2}: ${reason}`);
-        failedRows.push(row);
+      }
+      setImporting(false);
+      if (added || updated) {
+        toast.success(`${added} new student${added === 1 ? '' : 's'} imported; ${updated} existing student${updated === 1 ? '' : 's'} updated`);
+        fetchStudents();
+      }
+      if (failures.length) {
+        setImportRows(failedRows);
+        toast.error(`${failures.length} row${failures.length === 1 ? '' : 's'} failed. ${failures[0]}`, { duration: 6000 });
+      } else {
+        setShowImportModal(false);
+        setImportRows([]);
       }
     }
-    setImporting(false);
-    if (added || updated) { toast.success(`${added} new student${added === 1 ? '' : 's'} imported; ${updated} existing student${updated === 1 ? '' : 's'} updated`); fetchStudents(); }
-    if (failures.length) {
-      setImportRows(failedRows);
-      toast.error(`${failures.length} row${failures.length === 1 ? '' : 's'} failed. ${failures[0]}`, { duration: 6000 });
-    } else { setShowImportModal(false); setImportRows([]); }
   };
 
   const handleEditOpen = (student) => {

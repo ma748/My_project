@@ -1890,7 +1890,7 @@ app.post('/api/office/students', verifyToken, async (req, res) => {
     // Lookup fee plan based on admissionBatch and year
     const batchNum = Number(req.body.admissionBatch) || new Date().getFullYear();
     if (batchNum < 2000 || batchNum > 2100) return res.status(400).json({ error: 'Invalid admission batch' });
-    const currentYearNum = Number(academicDetails.year) || 1;
+    const currentYearNum = Number(academicDetails?.year) || 1;
 
     let totalFee = 85000; // default
     try {
@@ -1905,7 +1905,7 @@ app.post('/api/office/students', verifyToken, async (req, res) => {
       console.error('Error fetching fee plan during manual addition:', err);
     }
 
-    const feeCollected = Number(academicDetails.feeCollected) || 0;
+    const feeCollected = Number(academicDetails?.feeCollected) || 0;
     const pendingFee = Math.max(0, totalFee - feeCollected);
 
     const newStudent = new Student({
@@ -1965,6 +1965,130 @@ app.post('/api/office/students', verifyToken, async (req, res) => {
   } catch (error) {
     console.error('Manual Add Student Error:', error);
     res.status(500).json({ error: 'Failed to create student: ' + error.message });
+  }
+});
+
+// 3b. Bulk Import Students
+app.post('/api/office/students/bulk', verifyToken, async (req, res) => {
+  try {
+    if (!isOfficeAdmin(req.user.role)) {
+      return res.status(403).json({ error: 'Access Denied: Office role required' });
+    }
+
+    const students = Array.isArray(req.body.students) ? req.body.students : [];
+    if (!students.length) {
+      return res.status(400).json({ error: 'No student records provided' });
+    }
+
+    let added = 0;
+    let updated = 0;
+    const failures = [];
+
+    const keepProvidedFields = (section = {}) => Object.fromEntries(
+      Object.entries(section).filter(([, value]) => value !== '' && value !== null && value !== undefined && !(typeof value === 'number' && Number.isNaN(value)))
+    );
+
+    for (let i = 0; i < students.length; i += 1) {
+      const row = students[i];
+      const customStudentId = String(row.studentId || row.usn || '').trim();
+      const customAdmissionNumber = String(row.admissionNumber || (customStudentId ? `ADM-${customStudentId}` : '')).trim().toUpperCase();
+
+      if (!customStudentId) {
+        failures.push(`Row ${i + 1}: Student ID / USN is missing`);
+        continue;
+      }
+
+      try {
+        const orConditions = [];
+        if (customStudentId) orConditions.push({ studentId: customStudentId });
+        if (customAdmissionNumber) orConditions.push({ admissionNumber: customAdmissionNumber });
+        if (row.personalDetails?.cetNumber) orConditions.push({ 'personalDetails.cetNumber': row.personalDetails.cetNumber });
+        if (row.personalDetails?.aadhaarNumber) orConditions.push({ 'personalDetails.aadhaarNumber': row.personalDetails.aadhaarNumber });
+
+        let existing = null;
+        if (orConditions.length > 0) {
+          existing = await Student.findOne({ $or: orConditions });
+        }
+
+        if (existing) {
+          if (row.personalDetails) existing.personalDetails = { ...existing.personalDetails, ...keepProvidedFields(row.personalDetails) };
+          if (row.familyDetails) existing.familyDetails = { ...existing.familyDetails, ...keepProvidedFields(row.familyDetails) };
+          if (row.academicDetails) existing.academicDetails = { ...existing.academicDetails, ...keepProvidedFields(row.academicDetails) };
+          if (row.contactDetails) existing.contactDetails = { ...existing.contactDetails, ...keepProvidedFields(row.contactDetails) };
+          if (row.admissionType) existing.admissionType = row.admissionType;
+          if (row.admissionQuota) existing.admissionQuota = row.admissionQuota;
+          if (row.section) existing.section = row.section;
+          if (row.semester) existing.semester = Number(row.semester);
+
+          await existing.save();
+          await syncStudentRecords({ student: existing });
+          updated += 1;
+        } else {
+          const batchNum = Number(row.admissionBatch) || new Date().getFullYear();
+          const currentYearNum = Number(row.academicDetails?.year) || 1;
+          const feeCollected = Number(row.academicDetails?.feeCollected) || 0;
+          const totalFee = 85000;
+          const pendingFee = Math.max(0, totalFee - feeCollected);
+
+          const newStudent = new Student({
+            studentId: customStudentId,
+            admissionNumber: customAdmissionNumber,
+            personalDetails: row.personalDetails || {},
+            familyDetails: row.familyDetails || {},
+            academicDetails: row.academicDetails || {},
+            contactDetails: row.contactDetails || {},
+            documents: row.documents || {},
+            admissionType: row.admissionType || (row.academicDetails?.lateralEntry === 'Yes' ? 'Lateral Entry' : 'Regular'),
+            admissionQuota: row.admissionQuota || (row.admissionType === 'Lateral Entry' ? 'Lateral Entry' : 'CET'),
+            section: row.section || 'A',
+            admissionBatch: batchNum,
+            currentAcademicYear: row.currentAcademicYear || `${batchNum}-${batchNum + 1}`,
+            currentStudyYear: currentYearNum,
+            semester: Number(row.semester) || (currentYearNum * 2) - 1,
+            approvalStatus: 'Approved',
+            admissionStatus: { previousYear: 'Inactive', currentYear: 'Active' },
+            feeDetails: { totalFee, paidFee: feeCollected, pendingFee },
+            feeStatus: { previousYear: 'Completed', currentYear: pendingFee <= 0 ? 'Completed' : 'Pending' },
+            securityDetails: {
+              password: makeInitialPassword(),
+              securityQuestion: 'Default Question',
+              securityAnswer: 'Default Answer'
+            }
+          });
+
+          const initialPassword = newStudent.securityDetails.password;
+          newStudent.credentials = { username: newStudent.studentId, initialPassword, passwordChangeRequired: true };
+
+          if (feeCollected > 0) {
+            newStudent.feeHistory.push({
+              amount: feeCollected,
+              transactionId: 'IMPORT-INIT-' + Date.now() + '-' + i,
+              receiptNumber: 'REC-' + Date.now() + '-' + i,
+              paymentMode: 'Cash',
+              remarks: 'Admission fee collected recorded from import'
+            });
+          }
+
+          await newStudent.save();
+          await syncStudentRecords({ student: newStudent });
+          await ensureLifecycleForStudent(newStudent, { userId: req.user.id });
+          added += 1;
+        }
+      } catch (rowErr) {
+        console.error(`Bulk import error for student ${customStudentId}:`, rowErr);
+        failures.push(`Student ${customStudentId} (${row.personalDetails?.studentName || 'Unknown'}): ${rowErr.message}`);
+      }
+    }
+
+    res.json({
+      message: `Bulk import completed: ${added} added, ${updated} updated, ${failures.length} failed.`,
+      added,
+      updated,
+      failures
+    });
+  } catch (error) {
+    console.error('Bulk Import Error:', error);
+    res.status(500).json({ error: 'Bulk import failed: ' + error.message });
   }
 });
 
