@@ -286,82 +286,309 @@ export default function StudentManagement() {
     try {
       const workbook = XLSX.read(await file.arrayBuffer(), { cellDates: true });
       const grid = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: '', raw: false });
+
       const key = (value) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
       const aliases = {
-        studentid: ['studentid', 'usn', 'universityseatnumber', 'usno', 'universitynumber'],
+        studentname: ['studentname', 'name', 'studentfullname', 'fullname', 'candidatename'],
+        usn: ['usn', 'studentid', 'universityseatnumber', 'usno', 'registerno', 'regno'],
         admissionnumber: ['admissionnumber', 'admissionno', 'admno', 'admissionid'],
-        studentname: ['studentname', 'studentfullname', 'fullname', 'name', 'candidatename'],
-        cetnumber: ['cetnumber', 'cetno', 'cetapplicationnumber', 'kecetnumber', 'cetapplicationno', 'dcetnumber', 'dcetno'],
-        cetrank: ['cetrank', 'rank', 'kecetrank', 'cetmeritrank', 'dcetrank'],
-        dob: ['dob', 'dateofbirth', 'birthdate'],
-        aadhaarnumber: ['aadhaarnumber', 'aadhaar', 'aadharnumber', 'uidnumber', 'aadhaarno'],
-        studentcontact: ['studentcontact', 'studentphone', 'studentmobilenumber', 'mobile', 'mobilenumber', 'phone', 'contactnumber'],
-        email: ['email', 'emailid', 'studentemail', 'emailaddress'],
-        permanentaddress: ['permanentaddress', 'address', 'studentaddress', 'residentialaddress'],
-        correspondenceaddress: ['correspondenceaddress', 'presentaddress'],
-        fathername: ['fathername', 'fatherfullname', 'fathersname', 'father'],
-        mothername: ['mothername', 'motherfullname', 'mothersname', 'mother'],
-        parentcontact: ['parentcontact', 'parentphone', 'parentmobilenumber', 'guardiancontact', 'fathercontact'],
-        annualincome: ['annualincome', 'familyincome', 'parentannualincome'],
+        yearandbranch: ['yearandbranch', 'yearbranch', 'yearcourse', 'classandbranch', 'program'],
         branch: ['branch', 'department', 'course', 'program'],
         year: ['year', 'studyyear', 'currentstudyyear'],
-        admissionbatch: ['admissionbatch', 'batch', 'batchyear', 'joiningyear'],
-        bloodgroup: ['bloodgroup', 'bloodgrp'],
-        category: ['category', 'studentcategory', 'caste', 'castecategory'],
-        allottedcategory: ['allottedcategory', 'admissioncategory'],
-        section: ['section'],
+        fathername: ['fathername', 'fathersname', 'father', 'parentname'],
+        mothername: ['mothername', 'mothersname', 'mother'],
+        dob: ['dateofbirth', 'dob', 'birthdate'],
         gender: ['gender', 'sex'],
+        bloodgroup: ['bloodgroup', 'bloodgrp'],
         religion: ['religion'],
-        subcaste: ['subcaste', 'caste'],
-        fatheroccupation: ['fatheroccupation', 'fatherprofession'],
-        motheroccupation: ['motheroccupation', 'motherprofession'],
+        category: ['category', 'castecategory', 'studentcategory', 'caste'],
+        allottedcategory: ['allottedcategory', 'admissioncategory'],
+        subcaste: ['subcategory', 'subcaste', 'caste', 'community'],
+        parentcontact: ['parentscontactnumber', 'parentcontactnumber', 'parentcontact', 'parentphone', 'guardiancontact', 'fathercontact', 'mothercontact'],
+        studentcontact: ['studentcontactnumber', 'studentcontact', 'studentphone', 'studentmobile', 'mobile', 'mobilenumber', 'phone', 'contactnumber'],
+        email: ['studentemailid', 'emailid', 'studentemail', 'email', 'emailaddress'],
+        aadhaarnumber: ['studentaadharno', 'aadharnumber', 'aadhaarnumber', 'aadhaarno', 'aadharno', 'aadhaar', 'uidnumber', 'uid'],
+        permanentaddress: ['permanentaddressforcorrespondance', 'permanentaddress', 'address', 'residentialaddress', 'studentaddress'],
+        correspondenceaddress: ['currenctaddress', 'currentaddress', 'addressforcorrespondance', 'correspondenceaddress', 'presentaddress'],
+        kcetquota: ['kcetsnqkcetda', 'kcetobcdadcet', 'kcet', 'dcet', 'snq', 'admissionquota', 'quota'],
+        cetnumber: ['cetnumber', 'cetno', 'cetapplicationnumber', 'kecetnumber', 'cetapplicationno', 'dcetnumber', 'dcetno'],
+        cetrank: ['cetrank', 'rank', 'kecetrank', 'cetmeritrank', 'dcetrank'],
+        ntfnum: ['ntfnum', 'ntfnumber', 'ntfno'],
+        stayingathostel: ['stayingathostel', 'hostel', 'hosteler', 'ishostel'],
+        stayinginsidedistrict: ['stayinginsidehassandistrict', 'stayinginsidedistrict', 'insidedistrict'],
+        stayingoutsidedistrict: ['stayingoutsidehassndistrict', 'stayingoutsidedistrict', 'outsidedistrict'],
+        sspotrno: ['sspotrnoifaplicable', 'sspotrno', 'sspotr'],
+        nspotrno: ['nspotrnoifaplicable', 'nspotrno', 'nspotr'],
+        nspreferenceno: ['nspreferencenoifaplicable', 'nspreferenceno', 'nspref'],
+        categoryquota: ['categoryobcmigm0', 'categoryobcmigm', 'minorityquota'],
+        sino: ['sino', 'slno', 'serialno', 'noofstudent'],
+        section: ['section'],
+        admissionbatch: ['admissionbatch', 'batch', 'batchyear', 'joiningyear'],
         qualifyingexam: ['qualifyingexam', 'qualifyingexamination', 'exam'],
         board: ['board', 'boardname', 'diplomaboard'],
         state: ['state', 'diplomastate'],
         region: ['region', 'ruralurban'],
         feecollected: ['feecollected', 'amountpaid', 'feespaid'],
         diplomamarks: ['diplomamarks', 'diplomatotalmarks', 'diplomapercentage'],
-        lateralentry: ['lateralentry', 'entrytype', 'islateral'],
-        admissionquota: ['admissionquota', 'quota'],
-        admissiontype: ['admissiontype', 'entrytype']
+        lateralentry: ['lateralentry', 'entrytype', 'islateral']
       };
-      const headerIndex = grid.slice(0, 15).findIndex((line) => {
-        const headers = line.map(key);
-        return (aliases.studentname.some((name) => headers.includes(name)) || aliases.studentid.some((name) => headers.includes(name))) && headers.some((name) => aliases.admissionnumber.includes(name) || aliases.cetnumber.includes(name));
-      });
-      if (headerIndex < 0) throw new Error('Could not find the column headings. Use the downloadable template or include Student ID/USN, Student Name, and Admission Number headings.');
-      const headers = grid[headerIndex].map(key);
-      const displayHeaders = grid[headerIndex].map((value, index) => String(value || `Column ${index + 1}`));
-      const nameColumn = headers.findIndex((header) => aliases.studentname.includes(header));
-      const identifierColumns = headers.map((header, index) => aliases.studentid.includes(header) || aliases.cetnumber.includes(header) ? index : -1).filter((index) => index >= 0);
-      const sourceRows = grid.slice(headerIndex + 1).filter((line) => {
-        const hasName = nameColumn >= 0 && String(line[nameColumn] ?? '').trim() !== '';
-        const hasStudentId = identifierColumns.some((index) => String(line[index] ?? '').trim() !== '');
-        return hasName && hasStudentId;
-      });
-      const mapped = sourceRows.map((values) => {
-        const row = Object.fromEntries(headers.map((header, index) => [header, values[index] ?? '']));
-        const num = (value) => String(value ?? '').trim() === '' ? undefined : Number(value);
-        const get = (name, ...extra) => {
-          const candidates = aliases[name] || [key(name)];
-          for (const candidate of [...candidates, ...extra.map(key)]) if (row[candidate] !== undefined && String(row[candidate]).trim() !== '') return row[candidate];
+
+      const parseDate = (raw) => {
+        if (!raw) return '2005-01-01';
+        if (raw instanceof Date && !isNaN(raw)) return raw.toISOString().split('T')[0];
+        const str = String(raw).trim();
+        if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(str)) {
+          const [y, m, d] = str.split('-').map(Number);
+          return new Date(y, m - 1, d).toISOString().split('T')[0];
+        }
+        if (/^\d{1,2}[-.]\d{1,2}[-.]\d{4}$/.test(str)) {
+          const [d, m, y] = str.split(/[-.]/).map(Number);
+          return new Date(y, m - 1, d).toISOString().split('T')[0];
+        }
+        if (/^\d{1,2}[/-]\d{1,2}[/-]\d{4}$/.test(str)) {
+          const parts = str.split(/[/-]/).map(Number);
+          if (parts[0] > 12) return new Date(parts[2], parts[1] - 1, parts[0]).toISOString().split('T')[0];
+          return new Date(parts[2], parts[0] - 1, parts[1]).toISOString().split('T')[0];
+        }
+        const parsed = new Date(str);
+        return isNaN(parsed) ? '2005-01-01' : parsed.toISOString().split('T')[0];
+      };
+
+      let activeHeaders = null;
+      let activeColumnMap = null;
+      let currentYear = 1;
+      let currentBranch = 'CSE';
+      let currentAcademicYear = '2025-2026';
+
+      const mapped = [];
+      const nonNameTokens = ['sc', 'st', 'c1', '2a', '2b', '3a', '3b', 'gm', 'gmo', 'obc', 'mi', 'total', 'male', 'female', 'none', 'yes', 'no'];
+
+      for (let r = 0; r < grid.length; r += 1) {
+        const row = grid[r];
+        if (!row || !row.length) continue;
+        const rowText = row.map((c) => String(c ?? '').trim()).join(' ');
+        if (!rowText) continue;
+
+        // Check for section banner e.g. "STUDENT PERSONAL DETAILS OF 4TH YEAR CSE 2025 - 26"
+        const bannerMatch = rowText.match(/STUDENT\s+PERSONAL\s+DETAILS\s+OF\s+(\d+)(?:st|nd|rd|th)?\s*YEAR\s+([A-Za-z& ]+)\s+(\d{4}\s*-\s*\d{2,4})/i);
+        if (bannerMatch) {
+          currentYear = Number(bannerMatch[1]);
+          const bCode = bannerMatch[2].replace(/[^a-zA-Z]/g, '').toUpperCase();
+          if (bCode.includes('CS')) currentBranch = 'CSE';
+          else if (bCode.includes('EC')) currentBranch = 'ECE';
+          else if (bCode.includes('ME')) currentBranch = 'Mechanical';
+          else if (bCode.includes('CV') || bCode.includes('CIVIL')) currentBranch = 'Civil';
+          else if (bCode.includes('EE')) currentBranch = 'EEE';
+          currentAcademicYear = bannerMatch[3].replace(/\s+/g, '');
+          continue;
+        }
+
+        // Check if this row is a column header line
+        const keys = row.map(key);
+        const isNamePresent = aliases.studentname.some((a) => keys.includes(a));
+        const isUsnPresent = aliases.usn.some((a) => keys.includes(a));
+        const isFatherPresent = aliases.fathername.some((a) => keys.includes(a));
+        const isYearBranchPresent = aliases.yearandbranch.some((a) => keys.includes(a));
+        const isAdmPresent = aliases.admissionnumber.some((a) => keys.includes(a));
+        const isCetPresent = aliases.cetnumber.some((a) => keys.includes(a));
+
+        if (isNamePresent && (isUsnPresent || isFatherPresent || isYearBranchPresent || isAdmPresent || isCetPresent)) {
+          activeHeaders = keys;
+          activeColumnMap = {};
+          for (const [colName, aliasList] of Object.entries(aliases)) {
+            const idx = keys.findIndex((k) => aliasList.includes(k));
+            if (idx >= 0) activeColumnMap[colName] = idx;
+          }
+          continue;
+        }
+
+        // Skip summary or category divider rows
+        if (/CATEGORY LIST|TOTAL STRENGTH|STAYING IN HOSTEL|FINAL COUNT|ALLOTED SEAT|\bTOTAL\b/i.test(rowText)) continue;
+        if (/^(MALE|FEMALE)\s*-\s*(SC|ST|C1|2A|2B|3A|3B|GM|OBC)/i.test(rowText.trim()) || row.filter((c) => String(c).trim() !== '').length <= 2) continue;
+
+        if (!activeHeaders || !activeColumnMap) continue;
+
+        const getVal = (colName, ...extra) => {
+          const names = [colName, ...extra];
+          for (const name of names) {
+            const idx = activeColumnMap[name];
+            if (idx !== undefined && row[idx] !== undefined && String(row[idx]).trim() !== '') {
+              return String(row[idx]).trim();
+            }
+          }
           return '';
         };
-        const permanentAddress = get('permanentaddress');
-        return {
-          studentId: String(get('studentid') || get('cetnumber')).trim(), admissionNumber: String(get('admissionnumber') || (get('cetnumber') ? `IMPORT-${String(get('cetnumber')).trim()}` : '')).trim(),
-          personalDetails: { studentName: String(get('studentname')).trim(), cetNumber: String(get('cetnumber')).trim(), cetRank: num(get('cetrank')), dob: get('dob'), gender: get('gender'), bloodGroup: get('bloodgroup'), religion: get('religion'), category: get('category'), subCaste: get('subcaste'), aadhaarNumber: String(get('aadhaarnumber')).trim(), physicallyChallenged: get('physicallyChallenged') },
-          familyDetails: { fatherName: get('fathername'), motherName: get('mothername'), parentContact: String(get('parentcontact', 'studentcontact')).trim(), fatherOccupation: get('fatheroccupation'), motherOccupation: get('motheroccupation'), annualIncome: String(get('annualincome')).trim() === '' ? NaN : Number(get('annualincome')) },
-          academicDetails: { qualifyingExam: get('qualifyingexam'), board: get('board'), state: get('state'), region: get('region'), allottedCategory: get('allottedcategory') || get('category'), branch: get('branch'), year: num(get('year')), feeCollected: num(get('feecollected')), feeCollectedIdp: num(get('feecollectedidp')), feeCollectedVtu: num(get('feecollectedvtu')), feeCollectedPd: num(get('feecollectedpd')), percentage: num(get('percentage')), diplomaMarks: num(get('diplomamarks')), lateralEntry: get('lateralentry') },
-          contactDetails: { studentContact: String(get('studentcontact')).trim(), email: String(get('email')).trim(), permanentAddress, correspondenceAddress: get('correspondenceaddress') || permanentAddress, sameAsPermanent: String(get('sameaspermanent')).toLowerCase() === 'true' || !get('correspondenceaddress'), defenceQuota: get('defencequota'), sportsQuota: get('sportsquota'), snqQuota: get('snqquota') },
-          documents: { aadhaar: get('aadhaardocument'), marksCard: get('markscard'), photo: get('photo') }, admissionBatch: Number(get('admissionbatch')) || new Date().getFullYear(), admissionType: get('admissiontype') || (String(get('lateralentry')).toLowerCase() === 'yes' ? 'Lateral Entry' : 'Regular'), admissionQuota: get('admissionquota'), section: get('section'), semester: Number(get('semester')) || 1
+
+        const studentName = getVal('studentname');
+        if (!studentName || studentName.length < 2) continue;
+        if (!/[a-zA-Z]{2,}/.test(studentName)) continue;
+        if (nonNameTokens.includes(key(studentName))) continue;
+        if (aliases.studentname.some((a) => key(studentName) === a)) continue;
+
+        // Must have supporting student info
+        const hasSupportingInfo = Boolean(
+          getVal('dob') ||
+          getVal('studentcontact') ||
+          getVal('parentcontact') ||
+          getVal('email') ||
+          getVal('aadhaarnumber') ||
+          getVal('usn') ||
+          getVal('admissionnumber') ||
+          getVal('cetnumber')
+        );
+        if (!hasSupportingInfo) continue;
+
+        const ybText = getVal('yearandbranch') || `${currentYear} Year & ${currentBranch}`;
+        const yrMatch = ybText.match(/(\d+)(?:st|nd|rd|th)?\s*year/i);
+        const parsedYear = Number(getVal('year')) || (yrMatch ? Number(yrMatch[1]) : currentYear);
+
+        let branch = getVal('branch') || currentBranch;
+        if (/CSE|CS|COMPUTER/i.test(ybText)) branch = 'CSE';
+        else if (/ECE|EC|ELECTRONIC/i.test(ybText)) branch = 'ECE';
+        else if (/MECH|MECHANICAL/i.test(ybText)) branch = 'Mechanical';
+        else if (/CIVIL/i.test(ybText)) branch = 'Civil';
+        else if (/EEE|ELECTRICAL/i.test(ybText)) branch = 'EEE';
+
+        const quotaText = (getVal('kcetquota') + ' ' + getVal('ntfnum') + ' ' + getVal('usn')).toUpperCase();
+        const isExplicitLateral = /yes|true|lateral/i.test(getVal('lateralentry'));
+        const isLateral = isExplicitLateral || quotaText.includes('DCET') || /CS4\d\d/.test(getVal('usn')) || (parsedYear === 2 && quotaText.includes('DIPLOMA'));
+        const isSnq = quotaText.includes('SNQ') || /yes|true/i.test(getVal('snqquota'));
+
+        const admissionType = getVal('admissiontype') || (isLateral ? 'Lateral Entry' : 'Regular');
+        const admissionQuota = getVal('admissionquota') || (isLateral ? 'Lateral Entry' : isSnq ? 'SNQ' : 'CET');
+        const semester = Number(getVal('semester')) || (parsedYear === 1 ? 1 : parsedYear === 2 ? 3 : parsedYear === 3 ? 5 : 7);
+
+        const rawUsn = getVal('usn');
+        const ntf = getVal('ntfnum').replace(/\D/g, '');
+        const serialNo = getVal('sino') || (mapped.length + 1);
+
+        let studentId = rawUsn.toUpperCase();
+        if (!studentId || studentId === 'NULL') {
+          if (ntf) studentId = `NTF-${ntf}`;
+          else if (isLateral) studentId = `LAT-${currentAcademicYear.slice(0, 4)}-${String(serialNo).padStart(3, '0')}`;
+          else studentId = `STU-${currentAcademicYear.slice(0, 4)}-${String(serialNo).padStart(3, '0')}`;
+        }
+
+        const admissionNumber = getVal('admissionnumber') || `ADM-${studentId}`;
+
+        // Unique CET number assignment
+        const explicitCet = getVal('cetnumber');
+        const cetNumber = explicitCet || (ntf ? `NTF-${ntf}` : studentId);
+        const cetRank = Number(getVal('cetrank')) || Number(ntf) || Number(serialNo) || 0;
+
+        // Aadhaar: normalize spaces and non-digits
+        let aadhaar = getVal('aadhaarnumber').replace(/\D/g, '');
+        if (aadhaar.length !== 12) {
+          const seed = (ntf || studentId.replace(/\D/g, '') || String(serialNo)).padEnd(12, '9').slice(0, 12);
+          aadhaar = seed;
+        }
+
+        // Contacts
+        const parentContact = getVal('parentcontact').replace(/\D/g, '').slice(0, 10) || '9876543210';
+        let studentContact = getVal('studentcontact').replace(/\D/g, '').slice(0, 10);
+        if (!studentContact || studentContact.length < 10) studentContact = parentContact;
+
+        // Email
+        let email = getVal('email').toLowerCase().replace(/\s+/g, '');
+        if (!email || email.includes('*') || !email.includes('@')) {
+          email = `${studentId.toLowerCase().replace(/[^a-z0-9]/g, '')}@gecm.edu`;
+        }
+
+        const permanentAddress = getVal('permanentaddress') || 'Hassan, Karnataka';
+        const correspondenceAddress = getVal('correspondenceaddress') || permanentAddress;
+
+        const studentObj = {
+          studentId,
+          admissionNumber,
+          admissionType,
+          admissionQuota,
+          admissionBatch: Number(getVal('admissionbatch')) || Number(currentAcademicYear.slice(0, 4)) || 2025,
+          currentAcademicYear,
+          currentStudyYear: parsedYear,
+          section: getVal('section') || 'A',
+          semester,
+          personalDetails: {
+            studentName,
+            cetNumber,
+            cetRank,
+            dob: parseDate(getVal('dob')),
+            gender: /FEMALE/i.test(getVal('gender')) ? 'Female' : 'Male',
+            bloodGroup: getVal('bloodgroup').replace(/\s+/g, '') || 'O+',
+            religion: getVal('religion') || 'Hindu',
+            category: getVal('category') || 'General',
+            subCaste: getVal('subcaste') || '',
+            aadhaarNumber: aadhaar,
+            physicallyChallenged: /yes|true/i.test(getVal('physicallychallenged')) ? 'Yes' : 'No'
+          },
+          familyDetails: {
+            fatherName: getVal('fathername') || 'Not Provided',
+            motherName: getVal('mothername') || 'Not Provided',
+            parentContact,
+            fatherOccupation: getVal('fatheroccupation') || 'Not Provided',
+            motherOccupation: getVal('motheroccupation') || 'Not Provided',
+            annualIncome: Number(getVal('annualincome')) || 250000
+          },
+          academicDetails: {
+            qualifyingExam: getVal('qualifyingexam') || (isLateral ? 'Diploma' : 'PUC'),
+            board: getVal('board') || (isLateral ? 'DTE Karnataka' : 'Karnataka State Board'),
+            state: getVal('state') || 'Karnataka',
+            region: getVal('region') || 'Urban',
+            allottedCategory: getVal('allottedcategory') || getVal('category') || 'General',
+            branch,
+            year: parsedYear,
+            feeCollected: Number(getVal('feecollected')) || 85000,
+            diplomaMarks: Number(getVal('diplomamarks')) || undefined,
+            lateralEntry: isLateral ? 'Yes' : 'No'
+          },
+          contactDetails: {
+            studentContact,
+            email,
+            permanentAddress,
+            correspondenceAddress,
+            sameAsPermanent: true,
+            defenceQuota: /yes|true/i.test(getVal('defencequota')) ? 'Yes' : 'No',
+            sportsQuota: /yes|true/i.test(getVal('sportsquota')) ? 'Yes' : 'No',
+            snqQuota: isSnq ? 'Yes' : (/yes|true/i.test(getVal('snqquota')) ? 'Yes' : 'No'),
+            stayingAtHostel: /yes|true|hostel/i.test(getVal('stayingathostel')) ? 'Yes' : 'No',
+            stayingInsideDistrict: /yes|true/i.test(getVal('stayinginsidedistrict')) ? 'Yes' : 'No',
+            stayingOutsideDistrict: /yes|true/i.test(getVal('stayingoutsidedistrict')) ? 'Yes' : 'No',
+            nspReferenceNo: getVal('nspreferenceno'),
+            nspOtrNo: getVal('nspotrno'),
+            sspOtrNo: getVal('sspotrno'),
+            ntfNumber: getVal('ntfnum')
+          },
+          documents: {
+            aadhaar: getVal('aadhaardocument') || '',
+            marksCard: getVal('markscard') || '',
+            photo: getVal('photo') || ''
+          }
         };
+
+        mapped.push(studentObj);
+      }
+
+      if (!mapped.length) throw new Error('Could not find any valid student rows to import.');
+
+      setImportSheet({
+        headers: ['USN / ID', 'Student Name', 'Year & Branch', 'Category', 'Contact', 'Email', 'Type', 'Quota'],
+        rows: mapped.map((s) => [
+          s.studentId,
+          s.personalDetails.studentName,
+          `${s.academicDetails.year} Year - ${s.academicDetails.branch}`,
+          s.personalDetails.category || 'General',
+          s.contactDetails.studentContact || s.familyDetails.parentContact,
+          s.contactDetails.email,
+          s.admissionType,
+          s.admissionQuota
+        ])
       });
-      if (!mapped.length) throw new Error('The first sheet has no student rows.');
-      setImportSheet({ headers: displayHeaders, rows: sourceRows });
       setImportRows(mapped);
       setShowImportModal(true);
-    } catch (error) { toast.error(error.message || 'Could not read this Excel file'); }
+      toast.success(`Prepared ${mapped.length} student records for import review`);
+    } catch (error) {
+      toast.error(error.message || 'Could not read this Excel file');
+    }
   };
   const importStudents = async () => {
     setImporting(true);

@@ -1874,17 +1874,17 @@ app.post('/api/office/students', verifyToken, async (req, res) => {
     if (!customAdmissionNumber) {
       return res.status(400).json({ error: 'Admission Number is required' });
     }
-    const existing = await Student.findOne({
-      $or: [
-        { studentId: customStudentId },
-        { admissionNumber: customAdmissionNumber },
-        { 'personalDetails.cetNumber': personalDetails.cetNumber },
-        { 'personalDetails.aadhaarNumber': personalDetails.aadhaarNumber }
-      ]
-    });
+    const orConditions = [];
+    if (customStudentId) orConditions.push({ studentId: customStudentId });
+    if (customAdmissionNumber) orConditions.push({ admissionNumber: customAdmissionNumber });
+    if (personalDetails?.cetNumber) orConditions.push({ 'personalDetails.cetNumber': personalDetails.cetNumber });
+    if (personalDetails?.aadhaarNumber) orConditions.push({ 'personalDetails.aadhaarNumber': personalDetails.aadhaarNumber });
 
-    if (existing) {
-      return res.status(400).json({ error: 'A student with this Student ID, Admission Number, CET, or Aadhaar already exists.' });
+    if (orConditions.length > 0) {
+      const existing = await Student.findOne({ $or: orConditions });
+      if (existing) {
+        return res.status(400).json({ error: 'A student with this Student ID, Admission Number, CET, or Aadhaar already exists.' });
+      }
     }
 
     // Lookup fee plan based on admissionBatch and year
@@ -1914,10 +1914,13 @@ app.post('/api/office/students', verifyToken, async (req, res) => {
       academicDetails,
       contactDetails,
       documents,
+      admissionType: req.body.admissionType || (academicDetails?.lateralEntry === 'Yes' ? 'Lateral Entry' : 'Regular'),
+      admissionQuota: req.body.admissionQuota || (req.body.admissionType === 'Lateral Entry' ? 'Lateral Entry' : 'CET'),
+      section: req.body.section || 'A',
       admissionBatch: batchNum,
-      currentAcademicYear: `${batchNum}-${batchNum + 1}`,
+      currentAcademicYear: req.body.currentAcademicYear || `${batchNum}-${batchNum + 1}`,
       currentStudyYear: currentYearNum,
-      semester: (currentYearNum * 2) - 1,
+      semester: Number(req.body.semester) || (currentYearNum * 2) - 1,
       approvalStatus: 'Approved', // Manually added by office is auto-approved
       admissionStatus: { previousYear: 'Inactive', currentYear: 'Active' },
       feeDetails: {
