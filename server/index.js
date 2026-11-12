@@ -653,33 +653,39 @@ async function syncAdmissionRecord(payload) {
 }
 
 async function syncStudentRecords({ student, type = 'regular' }) {
+  if (!student) return;
   const isLateral = type === 'lateral';
   const studentId = student.studentId;
-  const batchYear = isLateral ? student.admissionYear : student.admissionBatch;
-  const branch = isLateral ? student.branch : student.academicDetails.branch;
-  await Promise.all([
-    syncStudentCredential({
-      studentId,
-      username: student.credentials?.username || studentId,
-      initialPassword: student.credentials?.initialPassword,
-      ...(isLateral ? { lateralRef: student._id } : { studentRef: student._id })
-    }),
-    syncAdmissionRecord({
-      studentId,
-      ...(isLateral ? { lateralRef: student._id } : { studentRef: student._id }),
-      admissionNumber: student.admissionNumber,
-      admissionType: isLateral ? 'Lateral Entry' : 'Regular',
-      batch: isLateral ? student.academicBatch : getBatchLabel(batchYear),
-      batchYear,
-      department: branch,
-      admissionYear: batchYear,
-      joiningSemester: isLateral ? student.joiningSemester : student.semester,
-      approvalStatus: isLateral ? 'Approved' : student.approvalStatus,
-      admissionStatus: isLateral ? { previousYear: 'Inactive', currentYear: student.status } : student.admissionStatus,
-      previousInstitution: isLateral ? student.previousCollege : undefined,
-      previousUniversity: isLateral ? student.previousUniversity : undefined
-    })
-  ]);
+  if (!studentId) return;
+  const batchYear = Number(isLateral ? student.admissionYear : student.admissionBatch) || new Date().getFullYear();
+  const branch = isLateral ? (student.branch || 'CSE') : (student.academicDetails?.branch || 'CSE');
+  try {
+    await Promise.all([
+      syncStudentCredential({
+        studentId,
+        username: student.credentials?.username || studentId,
+        initialPassword: student.credentials?.initialPassword,
+        ...(isLateral ? { lateralRef: student._id } : { studentRef: student._id })
+      }),
+      syncAdmissionRecord({
+        studentId,
+        ...(isLateral ? { lateralRef: student._id } : { studentRef: student._id }),
+        admissionNumber: student.admissionNumber || `ADM-${studentId}`,
+        admissionType: isLateral ? 'Lateral Entry' : (student.admissionType || 'Regular'),
+        batch: isLateral ? (student.academicBatch || getBatchLabel(batchYear)) : getBatchLabel(batchYear),
+        batchYear,
+        department: branch,
+        admissionYear: batchYear,
+        joiningSemester: isLateral ? (student.joiningSemester || 3) : (student.semester || 1),
+        approvalStatus: isLateral ? 'Approved' : (student.approvalStatus || 'Approved'),
+        admissionStatus: isLateral ? { previousYear: 'Inactive', currentYear: student.status || 'Active' } : (student.admissionStatus || { previousYear: 'Inactive', currentYear: 'Active' }),
+        previousInstitution: isLateral ? student.previousCollege : undefined,
+        previousUniversity: isLateral ? student.previousUniversity : undefined
+      })
+    ]);
+  } catch (err) {
+    console.error(`syncStudentRecords error for ${studentId}:`, err.message);
+  }
 }
 
 // Idempotent transition: legacy documents become archive records that point to
@@ -1910,6 +1916,8 @@ app.post('/api/office/students', verifyToken, async (req, res) => {
     const pendingFee = Math.max(0, totalFee - feeCollected);
 
     const newStudent = new Student({
+      studentId: customStudentId,
+      admissionNumber: customAdmissionNumber,
       personalDetails,
       familyDetails,
       academicDetails,
@@ -1961,7 +1969,11 @@ app.post('/api/office/students', verifyToken, async (req, res) => {
 
     await newStudent.save();
     await syncStudentRecords({ student: newStudent });
-    await ensureLifecycleForStudent(newStudent, { userId: req.user.id });
+    try {
+      await ensureLifecycleForStudent(newStudent, { userId: req.user?.id || req.user?._id });
+    } catch (lErr) {
+      console.warn(`Lifecycle warning for manual student ${customStudentId}:`, lErr.message);
+    }
     res.status(201).json({ message: 'Student created successfully!', student: newStudent, credentials: { username: newStudent.studentId, password: initialPassword } });
   } catch (error) {
     console.error('Manual Add Student Error:', error);
@@ -2023,6 +2035,11 @@ app.post('/api/office/students/bulk', verifyToken, async (req, res) => {
 
           await existing.save();
           await syncStudentRecords({ student: existing });
+          try {
+            await ensureLifecycleForStudent(existing, { userId: req.user?.id || req.user?._id });
+          } catch (lErr) {
+            console.warn(`Lifecycle check for existing ${customStudentId}:`, lErr.message);
+          }
           updated += 1;
         } else {
           const batchNum = Number(row.admissionBatch) || new Date().getFullYear();
@@ -2072,7 +2089,11 @@ app.post('/api/office/students/bulk', verifyToken, async (req, res) => {
 
           await newStudent.save();
           await syncStudentRecords({ student: newStudent });
-          await ensureLifecycleForStudent(newStudent, { userId: req.user.id });
+          try {
+            await ensureLifecycleForStudent(newStudent, { userId: req.user?.id || req.user?._id });
+          } catch (lErr) {
+            console.warn(`Lifecycle check for new ${customStudentId}:`, lErr.message);
+          }
           added += 1;
         }
       } catch (rowErr) {

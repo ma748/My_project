@@ -2,9 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Search, Plus, Edit2, Trash2, Eye, Upload, X, ShieldAlert, FileText, User, KeyRound, ScanFace } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Eye, Upload, X, ShieldAlert, FileText, User, KeyRound, ScanFace, Download } from 'lucide-react';
 import { sanitizeCETNumber, sanitizeCETRank } from '../../utils/cetValidation';
 import * as XLSX from 'xlsx';
+import ExportStudentsModal from '../../components/ExportStudentsModal';
 
 const getStudentStudyYear = (student) => {
   const batchYear = Number(student.admissionBatch);
@@ -33,6 +34,8 @@ export default function StudentManagement() {
   const [editStudent, setEditStudent] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [allStudents, setAllStudents] = useState([]);
   const [importRows, setImportRows] = useState([]);
   const [importSheet, setImportSheet] = useState({ headers: [], rows: [] });
   const [importing, setImporting] = useState(false);
@@ -130,6 +133,47 @@ export default function StudentManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openExportModal = async () => {
+    setShowExportModal(true);
+    if (allStudents.length === 0) {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get('/api/office/students', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (Array.isArray(res.data)) {
+          setAllStudents(res.data);
+        }
+      } catch {
+        setAllStudents(students);
+      }
+    }
+  };
+
+  const handleApplySavedFilters = (pattern) => {
+    if (!pattern) return;
+    if (pattern.Branch) setFilterBranch(pattern.Branch);
+    else if (pattern.branch) setFilterBranch(pattern.branch);
+
+    if (pattern.Year) {
+      const yrMatch = String(pattern.Year).match(/\d+/);
+      setFilterYear(yrMatch ? yrMatch[0] : 'All');
+    } else if (pattern.year) {
+      setFilterYear(String(pattern.year));
+    }
+
+    if (pattern.Batch) setFilterBatch(pattern.Batch);
+    else if (pattern.batch) setFilterBatch(pattern.batch);
+
+    if (pattern.FeeStatus) setFilterFee(pattern.FeeStatus);
+    else if (pattern.feeStatus) setFilterFee(pattern.feeStatus);
+
+    if (pattern.Search) setSearchQuery(pattern.Search);
+    else if (pattern.search) setSearchQuery(pattern.search);
+
+    toast.success('Applied remembered filter pattern!');
   };
 
   const viewCredentials = async (student) => {
@@ -594,12 +638,13 @@ export default function StudentManagement() {
   };
 
   const importStudents = async () => {
+    if (!importRows.length) return;
     setImporting(true);
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
 
     try {
-      // 1. Fast bulk import endpoint
+      // 1. Fast bulk import endpoint (handles both inserts and updates)
       const response = await axios.post('/api/office/students/bulk', { students: importRows }, { headers });
       const { added = 0, updated = 0, failures = [] } = response.data || {};
       setImporting(false);
@@ -616,7 +661,15 @@ export default function StudentManagement() {
         setImportRows([]);
       }
     } catch (bulkError) {
-      // 2. Fallback to individual request loop if bulk endpoint fails
+      const serverErrMsg = bulkError.response?.data?.error || bulkError.message || 'Server error';
+
+      if (bulkError.response?.status === 401 || bulkError.response?.status === 403) {
+        setImporting(false);
+        toast.error(serverErrMsg.includes('Office') || serverErrMsg.includes('expired') ? serverErrMsg : 'Session expired or Office permissions required. Please log in again.');
+        return;
+      }
+
+      // 2. Fallback to individual request loop if bulk endpoint is unavailable
       let added = 0;
       let updated = 0;
       const failures = [];
@@ -631,19 +684,17 @@ export default function StudentManagement() {
           await axios.post('/api/office/students', row, { headers });
           added += 1;
         } catch (error) {
-          const reason = error.response?.data?.error || 'registration failed';
+          const reason = error.response?.data?.error || error.message || 'registration failed';
           let existing = null;
-          if (/already exists|already in use/i.test(reason)) {
-            const searchValue = row.personalDetails?.cetNumber || row.studentId;
-            if (searchValue) {
-              try {
-                const searchRes = await axios.get('/api/office/students', { headers, params: { search: searchValue } });
-                existing = searchRes.data.find((student) =>
-                  String(student.studentId || '').toLowerCase() === String(row.studentId).toLowerCase() ||
-                  String(student.personalDetails?.cetNumber || '').toLowerCase() === String(row.personalDetails?.cetNumber || '').toLowerCase()
-                );
-              } catch { /* Continue on search failure */ }
-            }
+          const searchValue = row.personalDetails?.cetNumber || row.studentId;
+          if (searchValue) {
+            try {
+              const searchRes = await axios.get('/api/office/students', { headers, params: { search: searchValue } });
+              existing = searchRes.data.find((student) =>
+                String(student.studentId || '').toLowerCase() === String(row.studentId).toLowerCase() ||
+                String(student.personalDetails?.cetNumber || '').toLowerCase() === String(row.personalDetails?.cetNumber || '').toLowerCase()
+              );
+            } catch { /* Continue on search failure */ }
           }
           if (existing?._id) {
             try {
@@ -658,7 +709,7 @@ export default function StudentManagement() {
               updated += 1;
               continue;
             } catch (updateError) {
-              failures.push(`Row ${index + 2}: ${updateError.response?.data?.error || 'could not update student'}`);
+              failures.push(`Row ${index + 2}: ${updateError.response?.data?.error || updateError.message || 'could not update student'}`);
               failedRows.push(row);
               continue;
             }
@@ -797,6 +848,13 @@ export default function StudentManagement() {
             <Upload size={15} /> Import Excel
             <input type="file" accept=".xlsx,.xls,.csv" onChange={readImportFile} className="hidden" />
           </label>
+          <button
+            type="button"
+            onClick={openExportModal}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 text-xs font-semibold cursor-pointer transition-colors shadow-sm"
+          >
+            <Download size={15} /> Export
+          </button>
         </div>
       </div>
 
@@ -1308,6 +1366,22 @@ export default function StudentManagement() {
           </div>
         </div>
       )}
+
+      {/* Dynamic Export Students Modal */}
+      <ExportStudentsModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        filteredStudents={students}
+        allStudents={allStudents.length > 0 ? allStudents : students}
+        currentFilters={{
+          Search: searchQuery || '',
+          Branch: filterBranch !== 'All' ? filterBranch : '',
+          Year: filterYear !== 'All' ? `${filterYear} Year` : '',
+          Batch: filterBatch !== 'All' ? String(filterBatch) : '',
+          FeeStatus: filterFee !== 'All' ? filterFee : ''
+        }}
+        onApplyFilterPattern={handleApplySavedFilters}
+      />
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

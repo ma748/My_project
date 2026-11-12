@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { Search, Filter, GraduationCap, Eye, Download, RotateCcw, X, Users, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import StudentDetailsModal from './StudentDetailsModal';
+import ExportStudentsModal from '../../components/ExportStudentsModal';
 
 export default function ViewStudentsView() {
   const [searchParams] = useSearchParams();
@@ -10,9 +11,11 @@ export default function ViewStudentsView() {
   const token = localStorage.getItem('token');
 
   const [students, setStudents] = useState([]);
+  const [allStudents, setAllStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [admissionType, setAdmissionType] = useState('Regular');
+  const [showExportModal, setShowExportModal] = useState(false);
   
   const defaultFilters = {
     year: searchParams.get('year') || 'All',
@@ -88,55 +91,28 @@ export default function ViewStudentsView() {
     
   }, [searchTerm, filters, admissionType, token]);
 
-  const exportToCSV = () => {
-    if (students.length === 0) return;
-    
-    const headers = [
-      'Student ID', 
-      'Full Name', 
-      'Branch', 
-      'Study Year', 
-      'Semester',
-      'Section',
-      'Admission Quota',
-      'Category',
-      'Gender',
-      'Student Status', 
-      'Fee Status',
-      'Email', 
-      'Phone'
-    ];
-    
-    const csvRows = students.map(student => {
-      const sId = student.studentId || student.id || (student._id && student._id.slice(-6).toUpperCase());
-      const sName = student.personalDetails?.studentName || student.name || 'N/A';
-      const sCourse = student.academicDetails?.branch || student.course || student.branch || 'N/A';
-      const sYear = student.currentStudyYear || student.academicDetails?.year || student.year || 1;
-      const sSem = student.semester || student.academicDetails?.semester || 'N/A';
-      const sSec = student.section || 'A';
-      const sQuota = student.admissionQuota || 'CET';
-      const sCat = student.personalDetails?.category || 'General';
-      const sGender = student.personalDetails?.gender || 'N/A';
-      const sStatus = student.studentStatus || student.admissionStatus?.state || student.status || 'Active';
-      const feeCleared = student.feeStatus?.currentYear === 'Completed' || student.feePaid || student.academicDetails?.feeCollected > 0;
-      const sFee = feeCleared ? 'Cleared' : 'Pending';
-      const email = student.contactDetails?.email || 'N/A';
-      const phone = student.contactDetails?.studentContact || 'N/A';
-      
-      return [sId, sName, sCourse, `Year ${sYear}`, `Sem ${sSem}`, sSec, sQuota, sCat, sGender, sStatus, sFee, email, phone]
-        .map(val => `"${String(val).replace(/"/g, '""')}"`)
-        .join(',');
-    });
-    
-    const csvContent = [headers.map(h => `"${h}"`).join(','), ...csvRows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `student_records_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const openExportModal = async () => {
+    setShowExportModal(true);
+    if (allStudents.length === 0) {
+      try {
+        const res = await axios.get('/api/office/students', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (Array.isArray(res.data)) {
+          setAllStudents(res.data);
+        }
+      } catch {
+        setAllStudents(students);
+      }
+    }
+  };
+
+  const handleApplySavedFilters = (pattern) => {
+    if (!pattern) return;
+    setFilters(prev => ({
+      ...prev,
+      ...pattern
+    }));
   };
 
   return (
@@ -217,7 +193,7 @@ export default function ViewStudentsView() {
           )}
 
           <button 
-            onClick={exportToCSV}
+            onClick={openExportModal}
             disabled={students.length === 0}
             style={{ 
               display: 'inline-flex', 
@@ -236,7 +212,7 @@ export default function ViewStudentsView() {
               boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
             }}
           >
-            <Download size={16} /> Export CSV
+            <Download size={16} /> Export Data
           </button>
         </div>
       </div>
@@ -638,6 +614,19 @@ export default function ViewStudentsView() {
           }}
         />
       )}
+
+      <ExportStudentsModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        filteredStudents={students}
+        allStudents={allStudents.length > 0 ? allStudents : students}
+        currentFilters={{
+          Search: searchTerm || '',
+          AdmissionType: admissionType,
+          ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v && v !== 'All'))
+        }}
+        onApplyFilterPattern={handleApplySavedFilters}
+      />
     </div>
   );
 }
