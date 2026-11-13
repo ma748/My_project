@@ -188,20 +188,22 @@ export default function OfficeDashboard() {
   )?.count || 0;
 
   return (
-    <div className={`flex h-screen font-sans overflow-hidden ${isDarkMode ? 'bg-[#0f172a] text-slate-200' : 'bg-slate-100 text-slate-800'}`}>
+    <div className={`flex h-screen font-sans overflow-hidden ${isDarkMode ? 'bg-[#0b0f19] text-slate-200' : 'bg-slate-100 text-slate-800'}`}>
       <Toaster position="top-right" />
 
       {/* Sidebar for Desktop */}
-      <div className="w-68 bg-slate-900/80 border-r border-slate-800 backdrop-blur-xl flex flex-col justify-between hidden lg:flex z-20 shadow-2xl">
+      <div className={`w-68 border-r backdrop-blur-xl flex flex-col justify-between hidden lg:flex z-20 shadow-2xl transition-colors duration-200 ${
+        isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+      }`}>
         <div>
-          <div className="p-6 border-b border-slate-800 flex items-center gap-3">
+          <div className={`p-6 border-b flex items-center gap-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
             <div className="office-brand-mark text-blue-500 bg-blue-500/10 p-2.5 rounded-xl border border-blue-500/20">
               <Building2 size={24} />
               <span className="text-2xl">🏢</span>
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-100 leading-tight">Office Portal</h2>
-              <p className="text-xs text-slate-400">GECM Administration</p>
+              <h2 className={`text-base font-bold leading-tight ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>Office Portal</h2>
+              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>GECM Administration</p>
             </div>
           </div>
 
@@ -218,7 +220,9 @@ export default function OfficeDashboard() {
                   className={`flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-200 ${
                     isActive 
                       ? 'bg-blue-600 text-white font-medium shadow-lg shadow-blue-600/15 border border-blue-500/20' 
-                      : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
+                      : isDarkMode
+                        ? 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
                   <Icon size={19} />
@@ -229,13 +233,13 @@ export default function OfficeDashboard() {
           </nav>
         </div>
 
-        <div className="p-4 border-t border-slate-800/80 bg-slate-950/20">
-          <div className="mb-4 px-3.5 py-2.5 bg-slate-850/60 rounded-xl border border-slate-800/50">
-            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">Session Account</p>
-            <p className="text-sm font-semibold text-slate-250 truncate" title={userEmail}>
+        <div className={`p-4 border-t ${isDarkMode ? 'border-slate-800/80 bg-slate-950/20' : 'border-slate-200 bg-slate-50/50'}`}>
+          <div className={`mb-4 px-3.5 py-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-850/60 border-slate-800/50' : 'bg-slate-100 border-slate-200'}`}>
+            <p className={`text-[10px] uppercase tracking-wider font-semibold mb-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Session Account</p>
+            <p className={`text-sm font-semibold truncate ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`} title={userEmail}>
               {userEmail.split('@')[0]}
             </p>
-            <p className="text-[10px] text-slate-400 truncate">{userEmail}</p>
+            <p className={`text-[10px] truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{userEmail}</p>
           </div>
           <button
             onClick={() => setShowLogoutConfirm(true)}
@@ -251,13 +255,13 @@ export default function OfficeDashboard() {
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden flex">
           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)}></div>
-          <div className="w-68 bg-slate-900 border-r border-slate-800 flex flex-col justify-between relative z-50 p-4 animate-fade-in shadow-2xl">
+          <div className={`w-68 border-r flex flex-col justify-between relative z-50 p-4 animate-fade-in shadow-2xl ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}>
             <div>
-              <div className="flex items-center justify-between pb-6 mb-4 border-b border-slate-800">
+              <div className={`flex items-center justify-between pb-6 mb-4 border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                 <div className="office-mobile-brand flex items-center gap-2">
                   <Building2 size={22} className="text-blue-400" />
                   <span className="text-xl">🏢</span>
-                  <span className="font-bold text-slate-100">GECM Office</span>
+                  <span className={`font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>GECM Office</span>
                 </div>
                 <button onClick={() => setSidebarOpen(false)} className="p-1 rounded-lg hover:bg-slate-800 text-slate-400">
                   <X size={20} />
@@ -277,7 +281,9 @@ export default function OfficeDashboard() {
                       className={`flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-250 ${
                         isActive 
                           ? 'bg-blue-600 text-white font-medium shadow-md shadow-blue-500/15' 
-                          : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
+                          : isDarkMode
+                            ? 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                       }`}
                     >
                       <Icon size={19} />
@@ -287,7 +293,7 @@ export default function OfficeDashboard() {
                 })}
               </nav>
             </div>
-            <div className="pt-4 border-t border-slate-800">
+            <div className={`pt-4 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 onClick={() => { setSidebarOpen(false); setShowLogoutConfirm(true); }}
                 className="flex w-full items-center gap-3 px-4 py-3 rounded-xl text-rose-400 hover:bg-rose-500/10 font-medium transition-all duration-200"
@@ -303,15 +309,17 @@ export default function OfficeDashboard() {
       {/* Main Content Pane */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header Bar */}
-        <header className="h-16 border-b border-slate-800 bg-[#0f172a]/80 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-10 w-full">
+        <header className={`h-16 border-b backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-10 w-full transition-colors duration-200 ${
+          isDarkMode ? 'bg-[#0f172a]/90 border-slate-800' : 'bg-white/95 border-slate-200 shadow-sm'
+        }`}>
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 rounded-lg hover:bg-slate-800 text-slate-300 lg:hidden">
+            <button onClick={() => setSidebarOpen(true)} className={`p-2 -ml-2 rounded-lg lg:hidden ${isDarkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'}`}>
               <Menu size={20} />
             </button>
-            <h1 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+            <h1 className="text-lg font-bold flex items-center gap-2">
               <span className="text-blue-500">GECM</span>
-              <span className="text-slate-400">/</span>
-              <span className="text-slate-200 font-medium text-sm lg:text-base">
+              <span className={isDarkMode ? 'text-slate-500' : 'text-slate-400'}>/</span>
+              <span className={`font-medium text-sm lg:text-base ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                 {location.pathname === '/dashboard/office' ? 'Office Admin Hub' : 
                  location.pathname.includes('admissions') ? 'Admissions Verification' :
                  location.pathname.includes('fees') ? 'Fee Management' :
@@ -329,7 +337,9 @@ export default function OfficeDashboard() {
         </header>
         
         {/* Scrollable View Area */}
-        <main className="flex-1 overflow-auto p-4 md:p-8 bg-[#0b0f19]">
+        <main className={`flex-1 overflow-auto p-4 md:p-8 transition-colors duration-200 ${
+          isDarkMode ? 'bg-[#0b0f19]' : 'bg-[#f5f7fb]'
+        }`}>
           {location.pathname === '/dashboard/office' ? (
             <div className="animate-fade-in max-w-6.5xl mx-auto space-y-8">
               

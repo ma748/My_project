@@ -144,6 +144,59 @@ button:active {
   z-index: 60;
 }
 
+/* Base definitions for non-standard utility tokens used across office modules */
+[class*="text-slate-250"] {
+  color: #e2e8f0;
+}
+[class*="text-slate-350"] {
+  color: #cbd5e1;
+}
+[class*="text-slate-405"] {
+  color: #94a3b8;
+}
+[class*="text-slate-450"] {
+  color: #94a3b8;
+}
+[class*="text-slate-650"] {
+  color: #64748b;
+}
+[class*="text-slate-850"] {
+  color: #f1f5f9;
+}
+[class*="text-rose-450"] {
+  color: #fb7185;
+}
+[class*="text-amber-550"] {
+  color: #f59e0b;
+}
+[class*="bg-slate-850"] {
+  background-color: #1e293b;
+}
+[class*="bg-slate-905"] {
+  background-color: #0c1322;
+}
+[class*="border-slate-850"] {
+  border-color: rgba(51, 65, 85, 0.65);
+}
+[class*="bg-blue-550"] {
+  background-color: #2563eb;
+}
+[class*="hover:bg-blue-550"]:hover {
+  background-color: #1d4ed8;
+}
+[class*="hover:bg-slate-850"]:hover {
+  background-color: #334155;
+}
+
+/* Base form elements in dark mode */
+input, select, textarea {
+  color-scheme: dark;
+}
+select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
 html[data-theme='light'] .shadow-2xl,
 html[data-theme='light'] .shadow-xl,
 html[data-theme='light'] .shadow-lg,
@@ -160,6 +213,10 @@ html[data-theme='light'] [class*="bg-slate-900"],
 html[data-theme='light'] [class*="bg-slate-850"],
 html[data-theme='light'] [class*="bg-slate-800"] {
   background-color: var(--surface-color);
+}
+
+html[data-theme='light'] [class*="bg-slate-905"] {
+  background-color: #f8fafc;
 }
 
 html[data-theme='light'] [class*="bg-slate-100"] {
@@ -182,11 +239,12 @@ html[data-theme='light'] [class*="to-[#0f1d3a]"] {
 html[data-theme='light'] [class*="border-slate-850"],
 html[data-theme='light'] [class*="border-slate-800"],
 html[data-theme='light'] [class*="border-slate-700"] {
-  border-color: rgba(15, 23, 42, 0.11);
+  border-color: rgba(15, 23, 42, 0.12);
 }
 
-html[data-theme='light'] [class*="divide-slate-700"] > :not([hidden]) ~ :not([hidden]) {
-  border-color: rgba(15, 23, 42, 0.11);
+html[data-theme='light'] [class*="divide-slate-700"] > :not([hidden]) ~ :not([hidden]),
+html[data-theme='light'] [class*="divide-slate-800"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(15, 23, 42, 0.12);
 }
 
 html[data-theme='light'] [class*="text-slate-100"],
@@ -198,9 +256,23 @@ html[data-theme='light'] [class*="text-slate-300"] {
 
 html[data-theme='light'] [class*="text-slate-350"],
 html[data-theme='light'] [class*="text-slate-400"],
+html[data-theme='light'] [class*="text-slate-405"],
 html[data-theme='light'] [class*="text-slate-450"],
-html[data-theme='light'] [class*="text-slate-500"] {
+html[data-theme='light'] [class*="text-slate-500"],
+html[data-theme='light'] [class*="text-slate-650"] {
   color: #334155;
+}
+
+html[data-theme='light'] [class*="text-slate-850"] {
+  color: #0f172a;
+}
+
+html[data-theme='light'] [class*="text-rose-450"] {
+  color: #e11d48;
+}
+
+html[data-theme='light'] [class*="text-amber-550"] {
+  color: #d97706;
 }
 
 html[data-theme='light'] [class*="text-slate-600"] {
@@ -213,17 +285,18 @@ html[data-theme='light'] [class*="hover:bg-slate-850"]:hover {
   background-color: rgba(37, 99, 235, 0.08);
 }
 
+html[data-theme='light'] input,
 html[data-theme='light'] select,
-html[data-theme='light'] textarea,
-html[data-theme='light'] input {
+html[data-theme='light'] textarea {
+  color-scheme: light;
   color: #0f172a !important;
-  background-color: var(--input-bg);
-  border-color: rgba(15, 23, 42, 0.16);
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
 }
 
-select option {
-  background-color: var(--surface-strong);
-  color: var(--text-main);
+html[data-theme='light'] select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
 }
 
 ::placeholder {
