@@ -979,6 +979,35 @@ app.put('/api/students/:id', async (req, res) => {
   }
 });
 
+// Delete All Students (General API)
+app.delete('/api/students/all', verifyToken, async (req, res) => {
+  try {
+    if (!isOfficeAdmin(req.user.role)) {
+      return res.status(403).json({ error: 'Access Denied: Office or Admin role required' });
+    }
+
+    const studentCount = await Student.countDocuments();
+    const result = await Student.deleteMany({});
+
+    await Promise.allSettled([
+      StudentCredential.deleteMany({}),
+      LateralEntryStudent.deleteMany({}),
+      Admission.deleteMany({}),
+      PromotionHistory.deleteMany({}),
+      DocumentRecord.deleteMany({})
+    ]);
+
+    console.log(`[AUDIT] User ${req.user.id || req.user._id} (${req.user.role}) deleted all ${result.deletedCount || studentCount} student records.`);
+    res.json({
+      message: `Successfully deleted all ${result.deletedCount || studentCount} student records.`,
+      deletedCount: result.deletedCount || studentCount
+    });
+  } catch (error) {
+    console.error('Delete All Students Error:', error);
+    res.status(500).json({ error: 'Failed to delete all student records: ' + error.message });
+  }
+});
+
 // Delete Student
 app.delete('/api/students/:id', async (req, res) => {
   try {
@@ -2144,10 +2173,39 @@ app.put('/api/office/students/:id', verifyToken, async (req, res) => {
   }
 });
 
+// 5a. Delete All Students
+app.delete('/api/office/students/all', verifyToken, async (req, res) => {
+  try {
+    if (!isOfficeAdmin(req.user.role)) {
+      return res.status(403).json({ error: 'Access Denied: Office or Admin role required' });
+    }
+
+    const studentCount = await Student.countDocuments();
+    const result = await Student.deleteMany({});
+
+    await Promise.allSettled([
+      StudentCredential.deleteMany({}),
+      LateralEntryStudent.deleteMany({}),
+      Admission.deleteMany({}),
+      PromotionHistory.deleteMany({}),
+      DocumentRecord.deleteMany({})
+    ]);
+
+    console.log(`[AUDIT] User ${req.user.id || req.user._id} (${req.user.role}) deleted all ${result.deletedCount || studentCount} student records.`);
+    res.json({
+      message: `Successfully deleted all ${result.deletedCount || studentCount} student records.`,
+      deletedCount: result.deletedCount || studentCount
+    });
+  } catch (error) {
+    console.error('Delete All Students Error:', error);
+    res.status(500).json({ error: 'Failed to delete all student records: ' + error.message });
+  }
+});
+
 // 5. Delete Student
 app.delete('/api/office/students/:id', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 

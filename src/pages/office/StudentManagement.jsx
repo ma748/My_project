@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Search, Plus, Edit2, Trash2, Eye, Upload, X, ShieldAlert, FileText, User, KeyRound, ScanFace, Download } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Eye, Upload, X, ShieldAlert, FileText, User, KeyRound, ScanFace, Download, AlertTriangle } from 'lucide-react';
 import { sanitizeCETNumber, sanitizeCETRank } from '../../utils/cetValidation';
 import * as XLSX from 'xlsx';
 import ExportStudentsModal from '../../components/ExportStudentsModal';
@@ -40,6 +40,9 @@ export default function StudentManagement() {
   const [importSheet, setImportSheet] = useState({ headers: [], rows: [] });
   const [importing, setImporting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deleteAllConfirmText, setDeleteAllConfirmText] = useState('');
+  const [deletingAll, setDeletingAll] = useState(false);
   const [credentials, setCredentials] = useState(null);
 
   // Settings metadata
@@ -777,6 +780,33 @@ export default function StudentManagement() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (deleteAllConfirmText.trim().toUpperCase() !== 'DELETE ALL') {
+      toast.error('Please type "DELETE ALL" to confirm');
+      return;
+    }
+    setDeletingAll(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.delete('/api/office/students/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const count = res.data?.deletedCount ?? students.length;
+      toast.success(res.data?.message || `Successfully deleted ${count} student records`);
+      setShowDeleteAllModal(false);
+      setDeleteAllConfirmText('');
+      setStudents([]);
+      setAllStudents([]);
+      fetchStudents();
+    } catch (err) {
+      console.error('Delete All Students Error:', err);
+      const msg = err.response?.data?.error || err.message || 'Failed to delete all student records';
+      toast.error(msg);
+    } finally {
+      setDeletingAll(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
 
@@ -854,6 +884,18 @@ export default function StudentManagement() {
             className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 text-xs font-semibold cursor-pointer transition-colors shadow-sm"
           >
             <Download size={15} /> Export
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteAllConfirmText('');
+              setShowDeleteAllModal(true);
+            }}
+            disabled={loading || (students.length === 0 && allStudents.length === 0)}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 text-xs font-semibold cursor-pointer transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Permanently remove all student records from database"
+          >
+            <Trash2 size={15} /> Delete All
           </button>
         </div>
       </div>
@@ -1404,6 +1446,81 @@ export default function StudentManagement() {
                 className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-rose-600/20"
               >
                 Permanently Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Students Confirmation Modal */}
+      {showDeleteAllModal && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1e293b] border border-rose-500/40 p-6 rounded-2xl max-w-md w-full shadow-2xl animate-fade-in text-left">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-12 w-12 rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center justify-center flex-shrink-0">
+                <ShieldAlert size={26} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Delete All Student Records</h3>
+                <p className="text-xs text-rose-400/90 font-medium">Danger: Irreversible Bulk Action</p>
+              </div>
+            </div>
+
+            <div className="bg-rose-950/30 border border-rose-500/20 rounded-xl p-3.5 mb-4 text-xs text-rose-200/90 space-y-1.5">
+              <p className="font-semibold text-rose-300">
+                You are about to permanently purge all {allStudents.length > 0 ? allStudents.length : students.length} student records from the database.
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-300">
+                <li>All student profiles & contact records</li>
+                <li>All student portal login credentials</li>
+                <li>All admission records & documents</li>
+                <li>All fee payment history & receipts</li>
+                <li>All biometric face datasets</li>
+              </ul>
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-xs font-semibold text-slate-300 mb-2">
+                Type <span className="text-rose-400 font-mono font-bold">DELETE ALL</span> to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteAllConfirmText}
+                onChange={(e) => setDeleteAllConfirmText(e.target.value)}
+                placeholder="DELETE ALL"
+                className="w-full px-3.5 py-2.5 bg-slate-950/60 border border-slate-700 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 rounded-xl text-sm text-slate-100 placeholder-slate-600 outline-none font-mono"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                disabled={deletingAll}
+                onClick={() => {
+                  setShowDeleteAllModal(false);
+                  setDeleteAllConfirmText('');
+                }}
+                className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingAll || deleteAllConfirmText.trim().toUpperCase() !== 'DELETE ALL'}
+                onClick={handleDeleteAll}
+                className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-950/50 disabled:text-rose-500/40 disabled:border disabled:border-rose-900/30 disabled:cursor-not-allowed text-white rounded-xl text-xs font-semibold shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center gap-2"
+              >
+                {deletingAll ? (
+                  <>
+                    <span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Deleting All...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} /> Permanently Delete All
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { Search, Filter, GraduationCap, Eye, Download, RotateCcw, X, Users, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Search, Filter, GraduationCap, Eye, Download, RotateCcw, X, Users, CheckCircle2, Clock, AlertCircle, Trash2, ShieldAlert } from 'lucide-react';
 import StudentDetailsModal from './StudentDetailsModal';
 import ExportStudentsModal from '../../components/ExportStudentsModal';
 
@@ -9,6 +10,7 @@ export default function ViewStudentsView() {
   const [searchParams] = useSearchParams();
   const userRole = localStorage.getItem('userRole');
   const token = localStorage.getItem('token');
+  const isOfficeOrAdmin = ['admin', 'office', 'staff', 'principal'].includes(String(userRole || '').toLowerCase());
 
   const [students, setStudents] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
@@ -16,6 +18,9 @@ export default function ViewStudentsView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [admissionType, setAdmissionType] = useState('Regular');
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deleteAllConfirmText, setDeleteAllConfirmText] = useState('');
+  const [deletingAll, setDeletingAll] = useState(false);
   
   const defaultFilters = {
     year: searchParams.get('year') || 'All',
@@ -104,6 +109,31 @@ export default function ViewStudentsView() {
       } catch {
         setAllStudents(students);
       }
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (deleteAllConfirmText.trim().toUpperCase() !== 'DELETE ALL') {
+      toast.error('Please type "DELETE ALL" to confirm');
+      return;
+    }
+    setDeletingAll(true);
+    try {
+      const res = await axios.delete('/api/office/students/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const count = res.data?.deletedCount ?? students.length;
+      toast.success(res.data?.message || `Successfully deleted ${count} student records`);
+      setShowDeleteAllModal(false);
+      setDeleteAllConfirmText('');
+      setStudents([]);
+      setAllStudents([]);
+    } catch (err) {
+      console.error('Delete All Students Error:', err);
+      const msg = err.response?.data?.error || err.message || 'Failed to delete all student records';
+      toast.error(msg);
+    } finally {
+      setDeletingAll(false);
     }
   };
 
@@ -214,6 +244,34 @@ export default function ViewStudentsView() {
           >
             <Download size={16} /> Export Data
           </button>
+
+          {isOfficeOrAdmin && (
+            <button
+              onClick={() => {
+                setDeleteAllConfirmText('');
+                setShowDeleteAllModal(true);
+              }}
+              disabled={students.length === 0}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.65rem 1.25rem',
+                background: 'rgba(239, 68, 68, 0.12)',
+                color: '#f87171',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                borderRadius: '10px',
+                fontWeight: '500',
+                fontSize: '0.85rem',
+                cursor: students.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: students.length === 0 ? 0.5 : 1,
+                transition: 'all 0.2s'
+              }}
+              title="Delete all student records from database"
+            >
+              <Trash2 size={16} /> Delete All
+            </button>
+          )}
         </div>
       </div>
 
@@ -627,6 +685,149 @@ export default function ViewStudentsView() {
         }}
         onApplyFilterPattern={handleApplySavedFilters}
       />
+
+      {/* Delete All Students Modal */}
+      {showDeleteAllModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(2, 6, 23, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#1e293b',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            padding: '1.5rem',
+            borderRadius: '16px',
+            maxWidth: '28rem',
+            width: '100%',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            textAlign: 'left'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                borderRadius: '12px',
+                background: 'rgba(239, 68, 68, 0.15)',
+                color: '#f87171',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <ShieldAlert size={26} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#ffffff', margin: 0 }}>Delete All Student Records</h3>
+                <p style={{ fontSize: '0.75rem', color: '#f87171', fontWeight: '500', margin: '0.2rem 0 0 0' }}>Danger: Irreversible Bulk Action</p>
+              </div>
+            </div>
+
+            <div style={{
+              background: 'rgba(69, 10, 10, 0.35)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              borderRadius: '12px',
+              padding: '0.9rem',
+              marginBottom: '1rem',
+              fontSize: '0.78rem',
+              color: '#fecaca'
+            }}>
+              <p style={{ fontWeight: '600', color: '#fca5a5', margin: '0 0 0.5rem 0' }}>
+                You are about to permanently purge all {allStudents.length > 0 ? allStudents.length : students.length} student records from the database.
+              </p>
+              <ul style={{ margin: 0, paddingLeft: '1.2rem', lineHeight: '1.5', fontSize: '0.73rem', color: '#cbd5e1' }}>
+                <li>All student profiles & contact records</li>
+                <li>All student portal login credentials</li>
+                <li>All admission records & documents</li>
+                <li>All fee payment history & receipts</li>
+                <li>All biometric face datasets</li>
+              </ul>
+            </div>
+
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#e2e8f0', marginBottom: '0.5rem' }}>
+                Type <span style={{ color: '#f87171', fontFamily: 'monospace', fontWeight: '700' }}>DELETE ALL</span> to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteAllConfirmText}
+                onChange={(e) => setDeleteAllConfirmText(e.target.value)}
+                placeholder="DELETE ALL"
+                style={{
+                  width: '100%',
+                  padding: '0.65rem 0.85rem',
+                  background: 'rgba(2, 6, 23, 0.6)',
+                  border: '1px solid #475569',
+                  borderRadius: '10px',
+                  fontSize: '0.88rem',
+                  color: '#f8fafc',
+                  fontFamily: 'monospace',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                disabled={deletingAll}
+                onClick={() => {
+                  setShowDeleteAllModal(false);
+                  setDeleteAllConfirmText('');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.65rem 1rem',
+                  background: '#334155',
+                  color: '#e2e8f0',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingAll || deleteAllConfirmText.trim().toUpperCase() !== 'DELETE ALL'}
+                onClick={handleDeleteAll}
+                style={{
+                  flex: 1,
+                  padding: '0.65rem 1rem',
+                  background: (deleteAllConfirmText.trim().toUpperCase() === 'DELETE ALL' && !deletingAll) ? '#dc2626' : 'rgba(127, 29, 29, 0.5)',
+                  color: (deleteAllConfirmText.trim().toUpperCase() === 'DELETE ALL' && !deletingAll) ? '#ffffff' : 'rgba(248, 113, 113, 0.4)',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  cursor: (deleteAllConfirmText.trim().toUpperCase() === 'DELETE ALL' && !deletingAll) ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem'
+                }}
+              >
+                {deletingAll ? 'Deleting All...' : (
+                  <>
+                    <Trash2 size={14} /> Permanently Delete All
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
