@@ -23,12 +23,21 @@ const normalizeBranch = (value) => {
 
 const emptyYear = () => ({ boys: 0, girls: 0, total: 0 });
 
+const resolveStudentYear = (student) => {
+  const batchYear = Number(student.admissionBatch);
+  const academicStartYear = Number(String(student.currentAcademicYear || '').match(/^(\d{4})/)?.[1]);
+  if (student.admissionType !== 'Lateral Entry' && Number.isInteger(batchYear) && Number.isInteger(academicStartYear)) {
+    return Math.min(4, Math.max(1, academicStartYear - batchYear + 1));
+  }
+  return Number(student.currentStudyYear || student.academicDetails?.year || student.studyYear || student.year || 1);
+};
+
 const buildCategoryCounts = (students) => {
   const branches = new Map();
   for (const student of students) {
     if (student.approvalStatus !== 'Approved' && student.studentStatus !== 'Active') continue;
     const branch = normalizeBranch(student.academicDetails?.branch || student.branch || student.course);
-    const studyYear = Number(student.currentStudyYear || student.academicDetails?.year || student.studyYear || student.year || 1);
+    const studyYear = resolveStudentYear(student);
     if (!Number.isInteger(studyYear) || studyYear < 1 || studyYear > 4) continue;
 
     if (!branches.has(branch)) {
@@ -42,8 +51,11 @@ const buildCategoryCounts = (students) => {
     const row = branches.get(branch);
     const year = row.years[studyYear];
     const gender = String(student.personalDetails?.gender || student.gender || '').toLowerCase();
-    if (gender === 'male' || gender === 'm' || gender === 'boy') year.boys += 1;
-    if (gender === 'female' || gender === 'f' || gender === 'girl') year.girls += 1;
+    if (gender === 'female' || gender === 'f' || gender === 'girl') {
+      year.girls += 1;
+    } else {
+      year.boys += 1;
+    }
     year.total += 1;
     row.overall += 1;
   }

@@ -92,6 +92,23 @@ const loginThrottle = (key) => {
 };
 const clearLoginThrottle = (key) => loginAttempts.delete(key);
 
+// Helper to verify token
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader) return res.status(403).json({ error: 'No token provided' });
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : authHeader.split(' ')[1] || authHeader;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: 'Unauthorized token' });
+  }
+};
+
+const isOfficeReader = (role) => ['staff', 'office', 'principal', 'admin', 'hod'].includes(String(role || '').toLowerCase());
+const isOfficeAdmin = (role) => ['staff', 'office', 'principal', 'admin', 'hod'].includes(String(role || '').toLowerCase());
+
 // Dedicated authentication endpoints. Legacy login remains for backwards compatibility.
 app.post('/api/auth/student/login', async (req, res) => {
   const studentId = String(req.body.studentId || req.body.username || '').trim();
@@ -506,8 +523,12 @@ app.post('/api/auth/register', (req, res) => {
 });
 
 // Add New User (Mongoose DB)
-app.post('/api/users/add', async (req, res) => {
+app.post('/api/users/add', verifyToken, async (req, res) => {
   try {
+    if (!['principal', 'admin', 'office', 'staff'].includes(String(req.user?.role || '').toLowerCase())) {
+      return res.status(403).json({ error: 'Access Denied: Administrative role required' });
+    }
+
     const { name, email, role, branch, password, otp } = req.body;
     
     if (!name || !email || !role || !password) {
@@ -551,13 +572,33 @@ app.post('/api/users/add', async (req, res) => {
 
 // --- USER MANAGEMENT ROUTES --- //
 
-app.get('/api/users', (req, res) => {
-  const safeUsers = users.map(u => ({ id: u.id, username: u.username, email: u.email, role: u.role, createdAt: u.createdAt }));
-  res.json(safeUsers);
+app.get('/api/users', verifyToken, async (req, res) => {
+  if (!isOfficeReader(req.user?.role)) {
+    return res.status(403).json({ error: 'Access Denied: Administrative role required' });
+  }
+  try {
+    const mongoUsers = await User.find().select('name email role branch createdAt');
+    const safeMongoUsers = mongoUsers.map(u => ({ id: u._id, username: u.name, email: u.email, role: u.role, branch: u.branch, createdAt: u.createdAt }));
+    const safeMockUsers = users.map(u => ({ id: u.id, username: u.username, email: u.email, role: u.role, createdAt: u.createdAt }));
+    res.json([...safeMongoUsers, ...safeMockUsers]);
+  } catch (err) {
+    const safeUsers = users.map(u => ({ id: u.id, username: u.username, email: u.email, role: u.role, createdAt: u.createdAt }));
+    res.json(safeUsers);
+  }
 });
 
-app.delete('/api/users/:id', (req, res) => {
+app.delete('/api/users/:id', verifyToken, async (req, res) => {
+  if (!['principal', 'admin'].includes(String(req.user?.role || '').toLowerCase())) {
+    return res.status(403).json({ error: 'Access Denied: Principal or Admin role required' });
+  }
   const { id } = req.params;
+  try {
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      const deletedUser = await User.findByIdAndDelete(id);
+      if (deletedUser) return res.json({ message: 'User deleted successfully' });
+    }
+  } catch (e) {}
+
   const idx = users.findIndex(u => u.id === id);
   if (idx === -1) return res.status(404).json({ error: 'User not found' });
   if (users[idx].role === 'principal') return res.status(403).json({ error: 'Cannot delete principal account' });
@@ -565,23 +606,6 @@ app.delete('/api/users/:id', (req, res) => {
   users.splice(idx, 1);
   res.json({ message: 'User deleted successfully' });
 });
-
-// Helper to verify token
-const verifyToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  if (!authHeader) return res.status(403).json({ error: 'No token provided' });
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'Unauthorized token' });
-  }
-};
-
-const isOfficeReader = (role) => ['staff', 'office', 'principal', 'admin', 'hod'].includes(String(role || '').toLowerCase());
-const isOfficeAdmin = (role) => ['staff', 'office', 'principal', 'admin', 'hod'].includes(String(role || '').toLowerCase());
 
 const BRANCH_CODES = {
   CSE: 'CS', 'COMPUTER SCIENCE': 'CS', ECE: 'EC', 'ELECTRONICS & COMMUNICATION': 'EC',
@@ -950,24 +974,42 @@ app.get('/api/students', verifyToken, async (req, res) => {
 });
 
 // Fetch Single Student
-app.get('/api/students/:id', async (req, res) => {
+app.get('/api/students/:id', verifyToken, async (req, res) => {
   try {
     const student = await Student.findById(req.params.id).select('-securityDetails.password');
     if (!student) throw new Error('Not Found in Mongo');
+    
+    // Authorization check
+    const userRole = String(req.user?.role || '').toLowerCase();
+    if (userRole === 'student' && String(req.user.id) !== String(student._id) && req.user.studentId !== student.studentId) {
+      return res.status(403).json({ error: 'Access Denied' });
+    }
+    if (req.user.role === 'HOD' && req.user.branch && req.user.branch !== 'None') {
+      const bRegex = getBranchRegex(req.user.branch);
+      const studentBranch = student.academicDetails?.branch || student.branch || '';
+      if (!bRegex.test(studentBranch)) {
+        return res.status(403).json({ error: 'Access Denied: Student belongs to another department' });
+      }
+    }
+
     res.json(student);
   } catch (error) {
     const fallbackStudent = students.find(s => s.id === req.params.id);
     if (fallbackStudent) return res.json(fallbackStudent);
     
-    res.status(500).json({ error: 'Error fetching student' });
+    res.status(404).json({ error: 'Student not found' });
   }
 });
 
 // Update Student
-app.put('/api/students/:id', async (req, res) => {
+app.put('/api/students/:id', verifyToken, async (req, res) => {
   try {
+    if (!isOfficeAdmin(req.user.role)) {
+      return res.status(403).json({ error: 'Access Denied: Office role required' });
+    }
     const updated = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!updated) throw new Error('Not found in mongo');
+    await syncStudentRecords({ student: updated });
     res.json({ message: 'Student updated successfully', updated });
   } catch (error) {
     const idx = students.findIndex(s => s.id === req.params.id);
@@ -975,7 +1017,7 @@ app.put('/api/students/:id', async (req, res) => {
       students[idx] = { ...students[idx], ...req.body };
       return res.json({ message: 'Student updated successfully (Mock DB)', updated: students[idx] });
     }
-    res.status(500).json({ error: 'Error updating student' });
+    res.status(500).json({ error: 'Error updating student: ' + error.message });
   }
 });
 
@@ -1009,13 +1051,26 @@ app.delete('/api/students/all', verifyToken, async (req, res) => {
 });
 
 // Delete Student
-app.delete('/api/students/:id', async (req, res) => {
+app.delete('/api/students/:id', verifyToken, async (req, res) => {
   try {
+    if (!isOfficeAdmin(req.user.role)) {
+      return res.status(403).json({ error: 'Access Denied: Office role required' });
+    }
     const deleted = await Student.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Student not found' });
+    
+    const studentId = deleted.studentId;
+    await Promise.allSettled([
+      StudentCredential.deleteMany({ $or: [{ studentRef: deleted._id }, { studentId }] }),
+      FeePayment.deleteMany({ student: deleted._id }),
+      Admission.deleteMany({ $or: [{ studentRef: deleted._id }, { studentId }] }),
+      PromotionHistory.deleteMany({ student: deleted._id }),
+      DocumentRecord.deleteMany({ studentId })
+    ]);
+
     res.json({ message: 'Student removed from system' });
   } catch (error) {
-    res.status(500).json({ error: 'Error deleting student' });
+    res.status(500).json({ error: 'Error deleting student: ' + error.message });
   }
 });
 
@@ -1915,11 +1970,12 @@ app.post('/api/office/students', verifyToken, async (req, res) => {
     if (customAdmissionNumber) orConditions.push({ admissionNumber: customAdmissionNumber });
     if (personalDetails?.cetNumber) orConditions.push({ 'personalDetails.cetNumber': personalDetails.cetNumber });
     if (personalDetails?.aadhaarNumber) orConditions.push({ 'personalDetails.aadhaarNumber': personalDetails.aadhaarNumber });
+    if (contactDetails?.email) orConditions.push({ 'contactDetails.email': contactDetails.email });
 
     if (orConditions.length > 0) {
       const existing = await Student.findOne({ $or: orConditions });
       if (existing) {
-        return res.status(400).json({ error: 'A student with this Student ID, Admission Number, CET, or Aadhaar already exists.' });
+        return res.status(400).json({ error: 'A student with this Student ID, Admission Number, CET, Aadhaar, or Email already exists.' });
       }
     }
 
@@ -2059,6 +2115,36 @@ app.post('/api/office/students/bulk', verifyToken, async (req, res) => {
           });
           if (aadhaarDup) {
             row.personalDetails.aadhaarNumber = existing?.personalDetails?.aadhaarNumber || customStudentId.replace(/\D/g, '').padEnd(12, '9').slice(0, 12);
+          }
+        }
+
+        if (row.contactDetails?.email) {
+          const emailDup = await Student.findOne({
+            'contactDetails.email': row.contactDetails.email,
+            ...(existing ? { _id: { $ne: existing._id } } : { studentId: { $ne: customStudentId } })
+          });
+          if (emailDup) {
+            row.contactDetails.email = `${customStudentId.toLowerCase().replace(/[^a-z0-9]/g, '')}@gecm.edu`;
+          }
+        }
+
+        if (row.personalDetails?.cetNumber) {
+          const cetDup = await Student.findOne({
+            'personalDetails.cetNumber': row.personalDetails.cetNumber,
+            ...(existing ? { _id: { $ne: existing._id } } : { studentId: { $ne: customStudentId } })
+          });
+          if (cetDup) {
+            row.personalDetails.cetNumber = customStudentId;
+          }
+        }
+
+        if (customAdmissionNumber) {
+          const admDup = await Student.findOne({
+            admissionNumber: customAdmissionNumber,
+            ...(existing ? { _id: { $ne: existing._id } } : { studentId: { $ne: customStudentId } })
+          });
+          if (admDup) {
+            row.admissionNumber = `ADM-${customStudentId}`;
           }
         }
 
@@ -2247,22 +2333,19 @@ app.delete('/api/office/students/:id', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Student not found' });
     }
 
+    const studentId = student.studentId;
+    await Promise.allSettled([
+      StudentCredential.deleteMany({ $or: [{ studentRef: student._id }, { studentId }] }),
+      FeePayment.deleteMany({ student: student._id }),
+      Admission.deleteMany({ $or: [{ studentRef: student._id }, { studentId }] }),
+      PromotionHistory.deleteMany({ student: student._id }),
+      DocumentRecord.deleteMany({ studentId })
+    ]);
+
     res.json({ message: 'Student removed from system successfully' });
   } catch (error) {
     console.error('Delete Student Error:', error);
-    res.status(500).json({ error: 'Failed to delete student' });
-  }
-});
-
-// Office-only credential slip. Initial password is cleared after the student changes it.
-app.get('/api/office/students/:id/credentials', verifyToken, async (req, res) => {
-  try {
-    if (!isOfficeAdmin(req.user.role)) return res.status(403).json({ error: 'Office role required' });
-    const student = await Student.findById(req.params.id).select('studentId credentials personalDetails.studentName +credentials.initialPassword');
-    if (!student) return res.status(404).json({ error: 'Student not found' });
-    res.json({ studentName: student.personalDetails.studentName, username: student.studentId, password: student.credentials?.initialPassword || null, passwordChangeRequired: student.credentials?.passwordChangeRequired !== false });
-  } catch (error) {
-    res.status(500).json({ error: 'Unable to retrieve credentials' });
+    res.status(500).json({ error: 'Failed to delete student: ' + error.message });
   }
 });
 
