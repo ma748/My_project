@@ -35,14 +35,25 @@ const getNextAcademicYear = (academicYear) => {
 };
 
 const getStudyYear = (student, academicYear = student?.currentAcademicYear) => {
+  const explicitYear = Number(student?.currentStudyYear || student?.academicDetails?.year);
   const batchYear = Number(student?.admissionBatch);
   const academicStartYear = Number(String(academicYear || '').match(/^(\d{4})/)?.[1]);
+  const isLateral = student?.admissionType === 'Lateral Entry' || student?.academicDetails?.lateralEntry === 'Yes';
+  const firstStudyYear = isLateral ? 2 : 1;
+
+  if (Number.isInteger(explicitYear) && explicitYear >= 1 && explicitYear <= 4) {
+    const studentStartYear = Number(String(student?.currentAcademicYear || '').match(/^(\d{4})/)?.[1]);
+    if (!Number.isInteger(academicStartYear) || !Number.isInteger(studentStartYear) || academicStartYear <= studentStartYear) {
+      return explicitYear;
+    }
+    const diff = academicStartYear - studentStartYear;
+    return Math.min(4, Math.max(firstStudyYear, explicitYear + diff));
+  }
+
   if (Number.isInteger(batchYear) && Number.isInteger(academicStartYear)) {
-    const firstStudyYear = student?.admissionType === 'Lateral Entry' ? 2 : 1;
     return Math.min(4, Math.max(firstStudyYear, academicStartYear - batchYear + firstStudyYear));
   }
-  const value = Number(student.currentStudyYear || student.academicDetails?.year || 1);
-  return Math.min(4, Math.max(1, Number.isFinite(value) ? value : 1));
+  return Math.min(4, Math.max(1, Number.isFinite(explicitYear) ? explicitYear : 1));
 };
 
 const getAcademicYearForStudyYear = (student, studyYear) => {
@@ -158,7 +169,7 @@ const ensureLifecycleForStudent = async (student, options = {}) => {
   if (!student) return null;
 
   let changed = false;
-  const academicYear = options.academicYear || await getCurrentAcademicYear() || student.currentAcademicYear;
+  const academicYear = options.academicYear || student.currentAcademicYear || await getCurrentAcademicYear();
   const storedStudyYear = Math.min(4, Math.max(1, Number(student.currentStudyYear || student.academicDetails?.year || 1)));
   const studyYear = getStudyYear(student, academicYear);
   const semester = getSemesterForYear(studyYear, student.semester);
@@ -273,6 +284,16 @@ const ensureLifecycleForStudent = async (student, options = {}) => {
     if (!student.admissionQuota) {
       student.admissionQuota = getAdmissionQuota(student);
       changed = true;
+    }
+    const isLateral = student?.admissionType === 'Lateral Entry' || student?.academicDetails?.lateralEntry === 'Yes';
+    const firstStudyYear = isLateral ? 2 : 1;
+    const academicStartYearNum = Number(String(academicYear || '').match(/^(\d{4})/)?.[1]);
+    if (academicStartYearNum) {
+      const expectedBatch = academicStartYearNum - (studyYear - firstStudyYear);
+      if (!student.admissionBatch || (student.admissionBatch === academicStartYearNum && studyYear > 1)) {
+        student.admissionBatch = expectedBatch;
+        changed = true;
+      }
     }
     if (!['Active', 'Graduated'].includes(student.studentStatus)) {
       student.studentStatus = 'Active';

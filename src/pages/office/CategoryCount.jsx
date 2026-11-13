@@ -28,7 +28,7 @@ const buildCategoryCounts = (students) => {
   for (const student of students) {
     if (student.approvalStatus !== 'Approved' && student.studentStatus !== 'Active') continue;
     const branch = normalizeBranch(student.academicDetails?.branch || student.branch || student.course);
-    const studyYear = Number(student.currentStudyYear || student.academicDetails?.year || student.year || 1);
+    const studyYear = Number(student.currentStudyYear || student.academicDetails?.year || student.studyYear || student.year || 1);
     if (!Number.isInteger(studyYear) || studyYear < 1 || studyYear > 4) continue;
 
     if (!branches.has(branch)) {

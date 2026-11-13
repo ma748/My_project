@@ -2052,6 +2052,16 @@ app.post('/api/office/students/bulk', verifyToken, async (req, res) => {
           existing = await Student.findOne({ $or: orConditions });
         }
 
+        if (row.personalDetails?.aadhaarNumber) {
+          const aadhaarDup = await Student.findOne({
+            'personalDetails.aadhaarNumber': row.personalDetails.aadhaarNumber,
+            ...(existing ? { _id: { $ne: existing._id } } : { studentId: { $ne: customStudentId } })
+          });
+          if (aadhaarDup) {
+            row.personalDetails.aadhaarNumber = existing?.personalDetails?.aadhaarNumber || customStudentId.replace(/\D/g, '').padEnd(12, '9').slice(0, 12);
+          }
+        }
+
         if (existing) {
           if (row.personalDetails) existing.personalDetails = { ...existing.personalDetails, ...keepProvidedFields(row.personalDetails) };
           if (row.familyDetails) existing.familyDetails = { ...existing.familyDetails, ...keepProvidedFields(row.familyDetails) };
@@ -2061,6 +2071,13 @@ app.post('/api/office/students/bulk', verifyToken, async (req, res) => {
           if (row.admissionQuota) existing.admissionQuota = row.admissionQuota;
           if (row.section) existing.section = row.section;
           if (row.semester) existing.semester = Number(row.semester);
+          if (row.currentStudyYear || row.academicDetails?.year) {
+            const yr = Number(row.currentStudyYear || row.academicDetails?.year);
+            existing.currentStudyYear = yr;
+            if (existing.academicDetails) existing.academicDetails.year = yr;
+          }
+          if (row.admissionBatch) existing.admissionBatch = Number(row.admissionBatch);
+          if (row.currentAcademicYear) existing.currentAcademicYear = row.currentAcademicYear;
 
           await existing.save();
           await syncStudentRecords({ student: existing });
@@ -2146,7 +2163,7 @@ app.post('/api/office/students/bulk', verifyToken, async (req, res) => {
 // 4. Update Student
 app.put('/api/office/students/:id', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 

@@ -547,12 +547,17 @@ export default function StudentManagement() {
         const permanentAddress = getVal('permanentaddress') || 'Hassan, Karnataka';
         const correspondenceAddress = getVal('correspondenceaddress') || permanentAddress;
 
+        const acadStart = Number(String(currentAcademicYear || '').match(/^(\d{4})/)?.[1]) || 2025;
+        const firstYear = isLateral ? 2 : 1;
+        const inferredBatch = acadStart - (parsedYear - firstYear);
+        const admissionBatch = Number(getVal('admissionbatch')) || inferredBatch;
+
         const studentObj = {
           studentId,
           admissionNumber,
           admissionType,
           admissionQuota,
-          admissionBatch: Number(getVal('admissionbatch')) || Number(currentAcademicYear.slice(0, 4)) || 2025,
+          admissionBatch,
           currentAcademicYear,
           currentStudyYear: parsedYear,
           section: getVal('section') || 'A',
