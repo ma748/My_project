@@ -518,16 +518,19 @@ export default function AdmissionVerification() {
   };
 
   return (
-    <div className="space-y-6 text-slate-900">
-      <div className="bg-white border border-blue-100 rounded-2xl p-5 shadow-lg print:hidden">
+    <div className="space-y-6">
+      <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6 shadow-xl print:hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <Link to="/dashboard/office/admissions" className="inline-flex items-center gap-2 text-xs font-bold text-blue-700 hover:text-blue-900 mb-3">
-              <ArrowLeft size={15} /> Back to Admissions
-            </Link>
-            <span className="text-[10px] uppercase tracking-wider font-bold text-blue-600">Admission & Fee Management</span>
-            <h2 className="text-2xl font-bold text-slate-900 mt-1">Student Admission Module</h2>
-            <p className="text-sm text-slate-500 mt-1">Fast intake, validation, draft save, search, reporting, and printable admission forms.</p>
+            <div className="flex items-center gap-3 mb-2">
+              <Link to="/dashboard/office/admissions" className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors">
+                <ArrowLeft size={14} /> Back to Admissions
+              </Link>
+              <span className="text-slate-600">•</span>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-blue-400">Admission & Fee Management</span>
+            </div>
+            <h2 className="text-2xl font-bold text-slate-100 mt-1">Student Admission Module</h2>
+            <p className="text-xs text-slate-400 mt-1">Fast intake, validation, draft save, search, reporting, and printable admission forms.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <TabButton active={activeTab === 'form'} onClick={() => setActiveTab('form')} icon={UserPlus} label="New Admission" />
@@ -538,54 +541,54 @@ export default function AdmissionVerification() {
       </div>
 
       {activeTab === 'form' && !batchSelected && (
-        <div className="max-w-4xl mx-auto bg-white border border-blue-100 rounded-2xl shadow-xl overflow-hidden">
+        <div className="max-w-4xl mx-auto bg-slate-900/50 border border-slate-800/80 rounded-3xl shadow-2xl overflow-hidden backdrop-blur-xl">
           <div className="p-7 md:p-9 bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 text-white">
             <div className="h-11 w-11 rounded-xl bg-white/15 flex items-center justify-center mb-5"><GraduationCap size={23} /></div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-100">Admission workspace</p>
             <h3 className="text-2xl font-bold mt-2">Select batch before adding a student</h3>
             <p className="text-sm text-blue-100 mt-2 max-w-xl">The selected academic context is locked to the admission record. Enter the student’s assigned ID during admission.</p>
           </div>
-          <div className="p-7 md:p-9">
+          <div className="p-7 md:p-9 space-y-6">
             <div className="grid md:grid-cols-3 gap-5">
               <SelectField label="Admission Type" value={form.admissionType} onChange={(v) => updateField('admissionType', v)} options={['Regular', 'Lateral']} />
               <SelectField label="Academic Batch" value={availableBatches.includes(form.academicBatch) ? form.academicBatch : availableBatches[0]} onChange={(v) => updateField('academicBatch', v)} options={availableBatches} />
               <SelectField label="Branch" value={form.branch} onChange={(v) => updateField('branch', v)} options={branches} />
             </div>
-            <div className="mt-7 p-4 rounded-xl bg-slate-50 border border-slate-100 flex gap-3 text-sm text-slate-600">
-              <ShieldCheck className="text-emerald-600 shrink-0" size={19} />
-              <span><strong className="text-slate-800">Context protection enabled.</strong> Batch and branch will automatically appear in the student’s academic information.</span>
+            <div className="p-4 rounded-xl bg-slate-950/40 border border-slate-800/60 flex gap-3 text-xs text-slate-300">
+              <ShieldCheck className="text-emerald-400 shrink-0" size={18} />
+              <span><strong className="text-slate-100">Context protection enabled.</strong> Batch and branch will automatically appear in the student’s academic information.</span>
             </div>
-            <div className="mt-7 flex items-center justify-between gap-4">
-              <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500"><CalendarDays size={15} /> {form.admissionType} admission</div>
-              <button onClick={startAdmission} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-lg shadow-blue-500/20">Continue to student details <ArrowRight size={16} /></button>
+            <div className="flex items-center justify-between gap-4 pt-2">
+              <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400"><CalendarDays size={15} /> {form.admissionType} admission</div>
+              <button onClick={startAdmission} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold shadow-lg shadow-blue-600/20 transition-colors">Continue to student details <ArrowRight size={16} /></button>
             </div>
           </div>
         </div>
       )}
 
       {activeTab === 'form' && batchSelected && (
-        <div className="bg-white border border-blue-100 rounded-2xl shadow-xl overflow-hidden">
-          <div className="p-5 border-b border-blue-100 bg-blue-50/60 print:hidden">
+        <div className="bg-slate-900/50 border border-slate-800/80 rounded-3xl shadow-xl overflow-hidden backdrop-blur-xl">
+          <div className="p-6 border-b border-slate-800/80 bg-slate-950/40 print:hidden">
             <div className="flex items-center justify-between gap-4 mb-3">
               <div>
-                <h3 className="text-base font-bold text-slate-900">{editStudent ? 'Edit Admission Record' : 'New Admission Wizard'}</h3>
-                <p className="text-xs text-slate-500">{form.admissionType} • {form.academicBatch} • {form.branch} <button onClick={() => !editStudent && setBatchSelected(false)} className="ml-1 text-blue-700 font-bold hover:underline">Change</button></p>
+                <h3 className="text-base font-bold text-slate-100">{editStudent ? 'Edit Admission Record' : 'New Admission Wizard'}</h3>
+                <p className="text-xs text-slate-400">{form.admissionType} • {form.academicBatch} • {form.branch} <button onClick={() => !editStudent && setBatchSelected(false)} className="ml-1 text-blue-400 font-bold hover:underline">Change</button></p>
               </div>
-              <span className="text-xs font-bold text-blue-700">{completion}% Complete</span>
+              <span className="text-xs font-bold text-blue-400">{completion}% Complete</span>
             </div>
-            <div className="h-2 bg-white rounded-full overflow-hidden border border-blue-100">
+            <div className="h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
               <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${completion}%` }}></div>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-4">
               {steps.map((label, index) => (
-                <button key={label} onClick={() => index <= step && setStep(index)} className={`px-3 py-2 rounded-xl text-xs font-bold border ${index === step ? 'bg-blue-600 text-white border-blue-600' : index < step ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-slate-500 border-blue-100'}`}>
+                <button key={label} onClick={() => index <= step && setStep(index)} className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${index === step ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20' : index < step ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-slate-800/40 text-slate-400 border-slate-800 hover:bg-slate-800'}`}>
                   {index + 1}. {label}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="p-5 md:p-6">
+          <div className="p-6 md:p-8">
             {step === 0 && (
               <FormGrid title="Step 1: Personal Details">
                 <Field label="Student Name" value={form.studentName} onChange={(v) => updateField('studentName', v)} error={errors.studentName} required />
@@ -607,8 +610,8 @@ export default function AdmissionVerification() {
 
             {step === 1 && (
               <FormGrid title="Step 2: Admission & Reservation Details">
-                <div className="md:col-span-2 xl:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-2 p-3 rounded-xl bg-blue-50 border border-blue-100">
-                  {[['Course', 'B.E. / B.Tech'], ['Admission type', form.admissionType], ['Academic batch', form.academicBatch], ['Branch', form.branch]].map(([label, value]) => <div key={label} className="px-2"><span className="block text-[10px] uppercase tracking-wide font-bold text-slate-500">{label}</span><span className="text-xs font-bold text-slate-800">{value}</span></div>)}
+                <div className="md:col-span-2 xl:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-2 p-3.5 rounded-xl bg-slate-950/40 border border-slate-800/60">
+                  {[['Course', 'B.E. / B.Tech'], ['Admission type', form.admissionType], ['Academic batch', form.academicBatch], ['Branch', form.branch]].map(([label, value]) => <div key={label} className="px-2"><span className="block text-[10px] uppercase tracking-wide font-bold text-slate-400">{label}</span><span className="text-xs font-bold text-slate-100">{value}</span></div>)}
                 </div>
                 <Field label="Student ID / USN" value={form.studentId} onChange={(v) => updateField('studentId', v.toUpperCase())} error={errors.studentId} required disabled={Boolean(editStudent)} />
                 <Field label="Admission Number" value={form.admissionNumber} onChange={(v) => updateField('admissionNumber', v.toUpperCase())} error={errors.admissionNumber} required disabled={Boolean(editStudent)} />
@@ -644,8 +647,8 @@ export default function AdmissionVerification() {
               <FormGrid title="Step 4: Address & Family Details">
                 <TextArea label="Permanent Address" value={form.permanentAddress} onChange={(v) => updateField('permanentAddress', v)} error={errors.permanentAddress} required />
                 <div className="md:col-span-2">
-                  <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
-                    <input type="checkbox" checked={form.sameAsPermanent} onChange={(e) => updateField('sameAsPermanent', e.target.checked)} />
+                  <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-200 mb-3 cursor-pointer">
+                    <input type="checkbox" checked={form.sameAsPermanent} onChange={(e) => updateField('sameAsPermanent', e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500" />
                     Same as Permanent Address
                   </label>
                   <TextArea label="Correspondence Address" value={form.correspondenceAddress} onChange={(v) => updateField('correspondenceAddress', v)} error={errors.correspondenceAddress} required disabled={form.sameAsPermanent} />
@@ -655,16 +658,16 @@ export default function AdmissionVerification() {
               </FormGrid>
             )}
 
-            <div className="flex flex-col sm:flex-row justify-between gap-3 pt-6 mt-6 border-t border-blue-100 print:hidden">
-              <button onClick={() => setStep((value) => Math.max(0, value - 1))} disabled={step === 0} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-blue-100 text-sm font-bold text-slate-600 disabled:opacity-40">
+            <div className="flex flex-col sm:flex-row justify-between gap-3 pt-6 mt-6 border-t border-slate-800 print:hidden">
+              <button onClick={() => setStep((value) => Math.max(0, value - 1))} disabled={step === 0} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-slate-800 text-sm font-bold text-slate-300 hover:bg-slate-800 disabled:opacity-40 transition-colors">
                 <ArrowLeft size={16} /> Previous
               </button>
               {step < steps.length - 1 ? (
-                <button onClick={nextStep} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/20">
+                <button onClick={nextStep} className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold shadow-lg shadow-blue-600/20 transition-colors">
                   Next <ArrowRight size={16} />
                 </button>
               ) : (
-                <button onClick={() => validateAll() && setConfirmSubmit(true)} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/20">
+                <button onClick={() => validateAll() && setConfirmSubmit(true)} className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold shadow-lg shadow-blue-600/20 transition-colors">
                   Save & Set Up Student Login <ArrowRight size={16} />
                 </button>
               )}
@@ -675,28 +678,28 @@ export default function AdmissionVerification() {
 
       {activeTab === 'search' && (
         <div className="space-y-5">
-          <div className="bg-white border border-blue-100 rounded-2xl p-4 shadow-lg print:hidden">
+          <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-5 shadow-lg print:hidden">
             <div className="flex flex-col xl:flex-row gap-3">
               <div className="relative flex-1">
-                <Search size={17} className="absolute left-3 top-3 text-blue-500" />
-                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search by admission no, CET, name, Aadhaar, contact, email, branch, rank" className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-blue-100 text-sm focus:border-blue-500 focus:outline-none" />
+                <Search size={17} className="absolute left-3.5 top-3 text-slate-400" />
+                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search by admission no, CET, name, Aadhaar, contact, email, branch, rank" className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/40 border border-slate-800 text-slate-100 placeholder-slate-500 text-sm focus:border-blue-500 focus:outline-none" />
               </div>
-              <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)} className="px-3 py-2.5 rounded-xl border border-blue-100 text-sm">
-                <option value="All">All Branches</option>
-                {branches.map((branch) => <option key={branch} value={branch}>{branch}</option>)}
+              <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)} className="px-3.5 py-2.5 rounded-xl bg-slate-950/40 border border-slate-800 text-slate-200 text-sm focus:border-blue-500 focus:outline-none">
+                <option value="All" className="bg-slate-900 text-slate-100">All Branches</option>
+                {branches.map((branch) => <option key={branch} value={branch} className="bg-slate-900 text-slate-100">{branch}</option>)}
               </select>
-              <button onClick={downloadPdf} className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold"><FileDown size={16} /> PDF</button>
-              <button onClick={exportExcel} className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-blue-100 text-blue-700 text-sm font-bold"><Download size={16} /> Excel</button>
+              <button onClick={downloadPdf} className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-colors"><FileDown size={16} /> PDF</button>
+              <button onClick={exportExcel} className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-200 text-sm font-bold transition-colors"><Download size={16} /> Excel</button>
             </div>
           </div>
 
-          <div className="bg-white border border-blue-100 rounded-2xl shadow-xl overflow-hidden">
+          <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl shadow-xl overflow-hidden">
             {loading ? (
-              <div className="p-16 text-center text-slate-500">Loading admission records...</div>
+              <div className="p-16 text-center text-slate-400">Loading admission records...</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-blue-50 text-[11px] uppercase tracking-wider text-slate-500">
+                  <thead className="bg-slate-950/60 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
                     <tr>
                       <th className="p-4">Admission Number</th>
                       <th className="p-4">Student Name</th>
@@ -709,16 +712,16 @@ export default function AdmissionVerification() {
                       <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-blue-50">
+                  <tbody className="divide-y divide-slate-800/60">
                     {paginatedStudents.map((student) => (
-                      <tr key={student._id} className="hover:bg-blue-50/50">
-                        <td className="p-4 font-bold text-blue-700">{student.admissionNumber || 'Pending'}</td>
-                        <td className="p-4 font-semibold text-slate-800">{student.personalDetails?.studentName}</td>
-                        <td className="p-4">{student.personalDetails?.cetNumber}</td>
-                        <td className="p-4">{student.personalDetails?.cetRank}</td>
-                        <td className="p-4">{student.academicDetails?.branch}</td>
-                        <td className="p-4">{student.personalDetails?.category}</td>
-                        <td className="p-4">{student.contactDetails?.studentContact}</td>
+                      <tr key={student._id} className="hover:bg-slate-800/30 text-slate-200 transition-colors">
+                        <td className="p-4 font-bold text-blue-400">{student.admissionNumber || 'Pending'}</td>
+                        <td className="p-4 font-semibold text-slate-100">{student.personalDetails?.studentName}</td>
+                        <td className="p-4 text-slate-300">{student.personalDetails?.cetNumber}</td>
+                        <td className="p-4 text-slate-300">{student.personalDetails?.cetRank}</td>
+                        <td className="p-4 text-slate-300">{student.academicDetails?.branch}</td>
+                        <td className="p-4 text-slate-300">{student.personalDetails?.category}</td>
+                        <td className="p-4 text-slate-300">{student.contactDetails?.studentContact}</td>
                         <td className="p-4"><Status status={student.approvalStatus} /></td>
                         <td className="p-4 text-right">
                           <Action icon={FileText} title="View" onClick={() => setViewStudent(student)} />
@@ -749,12 +752,12 @@ export default function AdmissionVerification() {
               </div>
             )}
           </div>
-          <div className="flex justify-between items-center bg-white border border-blue-100 rounded-2xl p-3 print:hidden">
-            <span className="text-xs text-slate-500">Showing {paginatedStudents.length} of {filteredStudents.length} records</span>
+          <div className="flex justify-between items-center bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 print:hidden">
+            <span className="text-xs text-slate-400">Showing {paginatedStudents.length} of {filteredStudents.length} records</span>
             <div className="flex gap-2">
-              <button disabled={page === 1} onClick={() => setPage(page - 1)} className="px-3 py-1.5 rounded-lg border border-blue-100 text-xs font-bold disabled:opacity-40">Previous</button>
-              <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold">{page} / {totalPages}</span>
-              <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="px-3 py-1.5 rounded-lg border border-blue-100 text-xs font-bold disabled:opacity-40">Next</button>
+              <button disabled={page === 1} onClick={() => setPage(page - 1)} className="px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-bold text-slate-200 hover:bg-slate-800 disabled:opacity-40 transition-colors">Previous</button>
+              <span className="px-3 py-1.5 rounded-lg bg-blue-600/20 text-blue-400 text-xs font-bold border border-blue-500/20">{page} / {totalPages}</span>
+              <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-bold text-slate-200 hover:bg-slate-800 disabled:opacity-40 transition-colors">Next</button>
             </div>
           </div>
         </div>
@@ -778,33 +781,33 @@ export default function AdmissionVerification() {
 
       {confirmSubmit && (
         <Modal title="Confirm Admission Submission" onClose={() => setConfirmSubmit(false)}>
-          <p className="text-sm text-slate-600 mb-5">Save this admission record? For a new student, the final enrollment step will then generate login credentials and open face registration.</p>
+          <p className="text-sm text-slate-300 mb-5">Save this admission record? For a new student, the final enrollment step will then generate login credentials and open face registration.</p>
           <div className="flex gap-3">
-            <button onClick={() => setConfirmSubmit(false)} className="flex-1 py-2.5 rounded-xl border border-blue-100 text-sm font-bold">Cancel</button>
-            <button onClick={submitForm} className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold">Confirm Save</button>
+            <button onClick={() => setConfirmSubmit(false)} className="flex-1 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-200 text-sm font-bold transition-colors">Cancel</button>
+            <button onClick={submitForm} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-colors">Confirm Save</button>
           </div>
         </Modal>
       )}
 
       {enrollmentStudent && (
         <Modal title="Complete Student Enrollment" onClose={() => setEnrollmentStudent(null)}>
-          <p className="text-sm text-slate-600 mb-4">Approve <strong>{enrollmentStudent.personalDetails?.studentName}</strong>, assign the academic batch, and create the student login.</p>
+          <p className="text-sm text-slate-300 mb-4">Approve <strong className="text-slate-100">{enrollmentStudent.personalDetails?.studentName}</strong>, assign the academic batch, and create the student login.</p>
           <div className="space-y-3">
             <Field label="Admission Batch (start year)" type="number" value={enrollment.batch} onChange={(value) => setEnrollment((prev) => ({ ...prev, batch: value }))} required />
             <Field label="Joining Semester" type="number" value={enrollment.semester} onChange={(value) => setEnrollment((prev) => ({ ...prev, semester: value }))} required />
             <Field label="Section" value={enrollment.section} onChange={(value) => setEnrollment((prev) => ({ ...prev, section: value.toUpperCase().slice(0, 1) }))} required />
           </div>
-          <div className="flex gap-3 mt-5"><button onClick={() => setEnrollmentStudent(null)} className="flex-1 py-2.5 rounded-xl border border-blue-100 text-sm font-bold">Cancel</button><button onClick={completeEnrollment} className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold">Approve & Generate</button></div>
+          <div className="flex gap-3 mt-5"><button onClick={() => setEnrollmentStudent(null)} className="flex-1 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-200 text-sm font-bold transition-colors">Cancel</button><button onClick={completeEnrollment} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-colors">Approve & Generate</button></div>
         </Modal>
       )}
 
       {credentials && (
         <Modal title="Student Login Credential" onClose={() => setCredentials(null)}>
           <div className="space-y-4">
-            <p className="text-sm font-bold text-slate-900">{credentials.student?.personalDetails?.studentName || credentials.studentName}</p>
-            <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 space-y-2 text-sm"><div className="flex justify-between gap-4"><span>Username</span><code className="font-bold text-blue-700">{credentials.username}</code></div><div className="flex justify-between gap-4"><span>Initial password</span><code className="font-bold text-blue-700">{credentials.password || 'Already changed by student'}</code></div></div>
-            <p className="text-xs text-slate-500">Give this credential to the student securely. Face registration is then completed by office staff and used for the next-year admission update verification.</p>
-            <div className="flex gap-3"><button onClick={() => window.print()} className="flex-1 py-2.5 rounded-xl border border-blue-100 text-sm font-bold">Print</button><button onClick={() => navigate('/dashboard/office/facerec', { state: { studentId: credentials.student?._id } })} className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold inline-flex items-center justify-center gap-2"><Camera size={15} /> Register Face</button></div>
+            <p className="text-sm font-bold text-slate-100">{credentials.student?.personalDetails?.studentName || credentials.studentName}</p>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-2 text-sm"><div className="flex justify-between gap-4"><span className="text-slate-400">Username</span><code className="font-bold text-blue-400">{credentials.username}</code></div><div className="flex justify-between gap-4"><span className="text-slate-400">Initial password</span><code className="font-bold text-blue-400">{credentials.password || 'Already changed by student'}</code></div></div>
+            <p className="text-xs text-slate-400">Give this credential to the student securely. Face registration is then completed by office staff and used for the next-year admission update verification.</p>
+            <div className="flex gap-3"><button onClick={() => window.print()} className="flex-1 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-200 text-sm font-bold transition-colors">Print</button><button onClick={() => navigate('/dashboard/office/facerec', { state: { studentId: credentials.student?._id } })} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold inline-flex items-center justify-center gap-2 transition-colors"><Camera size={15} /> Register Face</button></div>
           </div>
         </Modal>
       )}
@@ -813,10 +816,10 @@ export default function AdmissionVerification() {
 
       {deleteTarget && (
         <Modal title="Delete Admission Record" onClose={() => setDeleteTarget(null)}>
-          <p className="text-sm text-slate-600 mb-5">Delete {deleteTarget.personalDetails?.studentName}'s admission record?</p>
+          <p className="text-sm text-slate-300 mb-5">Delete <strong className="text-slate-100">{deleteTarget.personalDetails?.studentName}</strong>'s admission record?</p>
           <div className="flex gap-3">
-            <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2.5 rounded-xl border border-blue-100 text-sm font-bold">Cancel</button>
-            <button onClick={deleteRecord} className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-bold">Delete</button>
+            <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-200 text-sm font-bold transition-colors">Cancel</button>
+            <button onClick={deleteRecord} className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold transition-colors">Delete</button>
           </div>
         </Modal>
       )}
@@ -826,7 +829,7 @@ export default function AdmissionVerification() {
 
 function TabButton({ active, onClick, icon: Icon, label }) {
   return (
-    <button onClick={onClick} className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${active ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-white border-blue-100 text-slate-600 hover:bg-blue-50'}`}>
+    <button onClick={onClick} className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${active ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800/40 border-slate-700/60 text-slate-300 hover:bg-slate-800 hover:text-slate-100'}`}>
       <Icon size={15} /> {label}
     </button>
   );
@@ -835,7 +838,7 @@ function TabButton({ active, onClick, icon: Icon, label }) {
 function FormGrid({ title, children }) {
   return (
     <div>
-      <h4 className="text-sm font-bold text-blue-700 uppercase tracking-wider mb-4">{title}</h4>
+      <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-4">{title}</h4>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{children}</div>
     </div>
   );
@@ -844,9 +847,9 @@ function FormGrid({ title, children }) {
 function Field({ label, value, onChange, error, type = 'text', required = false, disabled = false }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold text-slate-600">{label}{required && <span className="text-rose-500"> *</span>}</span>
-      <input type={type} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} className={`mt-1 w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 ${error ? 'border-rose-300' : 'border-blue-100 focus:border-blue-500'}`} />
-      {error && <span className="text-[11px] text-rose-600 mt-1 block">{error}</span>}
+      <span className="text-xs font-bold text-slate-300">{label}{required && <span className="text-rose-500"> *</span>}</span>
+      <input type={type} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} className={`mt-1.5 w-full px-3.5 py-2.5 rounded-xl bg-slate-950/40 border text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 transition-colors ${error ? 'border-rose-500/80 ring-1 ring-rose-500/40' : 'border-slate-800'}`} />
+      {error && <span className="text-[11px] text-rose-400 mt-1 block font-medium">{error}</span>}
     </label>
   );
 }
@@ -854,11 +857,11 @@ function Field({ label, value, onChange, error, type = 'text', required = false,
 function SelectField({ label, value, onChange, options, error, disabled = false }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold text-slate-600">{label}</span>
-      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} className={`mt-1 w-full px-3 py-2.5 rounded-xl border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-60 ${error ? 'border-rose-300' : 'border-blue-100 focus:border-blue-500'}`}>
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+      <span className="text-xs font-bold text-slate-300">{label}</span>
+      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} className={`mt-1.5 w-full px-3.5 py-2.5 rounded-xl bg-slate-950/40 border text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 transition-colors ${error ? 'border-rose-500/80 ring-1 ring-rose-500/40' : 'border-slate-800'}`}>
+        {options.map((option) => <option key={option} value={option} className="bg-slate-900 text-slate-100">{option}</option>)}
       </select>
-      {error && <span className="text-[11px] text-rose-600 mt-1 block">{error}</span>}
+      {error && <span className="text-[11px] text-rose-400 mt-1 block font-medium">{error}</span>}
     </label>
   );
 }
@@ -866,21 +869,21 @@ function SelectField({ label, value, onChange, options, error, disabled = false 
 function TextArea({ label, value, onChange, error, required = false, disabled = false }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold text-slate-600">{label}{required && <span className="text-rose-500"> *</span>}</span>
-      <textarea value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} rows={4} className={`mt-1 w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 ${error ? 'border-rose-300' : 'border-blue-100 focus:border-blue-500'}`} />
-      {error && <span className="text-[11px] text-rose-600 mt-1 block">{error}</span>}
+      <span className="text-xs font-bold text-slate-300">{label}{required && <span className="text-rose-500"> *</span>}</span>
+      <textarea value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} rows={4} className={`mt-1.5 w-full px-3.5 py-2.5 rounded-xl bg-slate-950/40 border text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 transition-colors ${error ? 'border-rose-500/80 ring-1 ring-rose-500/40' : 'border-slate-800'}`} />
+      {error && <span className="text-[11px] text-rose-400 mt-1 block font-medium">{error}</span>}
     </label>
   );
 }
 
 function Status({ status }) {
-  const tone = status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : status === 'Rejected' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200';
-  return <span className={`px-2 py-1 rounded-lg text-[11px] font-bold border ${tone}`}>{status || 'Pending'}</span>;
+  const tone = status === 'Approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : status === 'Rejected' ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+  return <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border ${tone}`}>{status || 'Pending'}</span>;
 }
 
 function Action({ icon: Icon, onClick, title, danger = false }) {
   return (
-    <button title={title} onClick={onClick} className={`inline-flex p-1.5 rounded-lg mr-1 border ${danger ? 'text-rose-600 border-rose-100 hover:bg-rose-50' : 'text-blue-700 border-blue-100 hover:bg-blue-50'}`}>
+    <button title={title} onClick={onClick} className={`inline-flex p-1.5 rounded-lg mr-1 border transition-colors ${danger ? 'text-rose-400 border-rose-500/20 hover:bg-rose-500/10' : 'border-slate-700 hover:bg-slate-800 text-slate-300 hover:text-white'}`}>
       <Icon size={14} />
     </button>
   );
@@ -888,12 +891,12 @@ function Action({ icon: Icon, onClick, title, danger = false }) {
 
 function StatCard({ label, value, icon: Icon }) {
   return (
-    <div className="bg-white border border-blue-100 rounded-2xl p-5 shadow-lg">
+    <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-5 shadow-lg">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{label}</span>
-        <Icon size={18} className="text-blue-600" />
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+        <Icon size={18} className="text-blue-400" />
       </div>
-      <div className="text-2xl font-bold text-slate-900 mt-3">{value}</div>
+      <div className="text-2xl font-bold text-slate-100 mt-3">{value}</div>
     </div>
   );
 }
@@ -901,13 +904,13 @@ function StatCard({ label, value, icon: Icon }) {
 function StatsPanel({ title, data }) {
   const max = Math.max(1, ...Object.values(data));
   return (
-    <div className="bg-white border border-blue-100 rounded-2xl p-5 shadow-lg">
-      <h3 className="text-sm font-bold text-slate-900 mb-4">{title}</h3>
+    <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-5 shadow-lg">
+      <h3 className="text-sm font-bold text-slate-100 mb-4">{title}</h3>
       <div className="space-y-3">
         {Object.entries(data).length === 0 ? <p className="text-xs text-slate-500">No data yet.</p> : Object.entries(data).map(([label, value]) => (
           <div key={label}>
-            <div className="flex justify-between text-xs font-bold text-slate-600 mb-1"><span>{label}</span><span>{value}</span></div>
-            <div className="h-2 rounded-full bg-blue-50 overflow-hidden"><div className="h-full bg-blue-600" style={{ width: `${(value / max) * 100}%` }}></div></div>
+            <div className="flex justify-between text-xs font-bold text-slate-300 mb-1"><span>{label}</span><span className="text-slate-100">{value}</span></div>
+            <div className="h-2 rounded-full bg-slate-800 overflow-hidden"><div className="h-full bg-blue-600 rounded-full" style={{ width: `${(value / max) * 100}%` }}></div></div>
           </div>
         ))}
       </div>
@@ -917,11 +920,11 @@ function StatsPanel({ title, data }) {
 
 function Modal({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4 print:hidden">
-      <div className="bg-white border border-blue-100 rounded-2xl shadow-2xl p-6 max-w-md w-full">
-        <div className="flex items-center justify-between pb-4 mb-4 border-b border-blue-100">
-          <h3 className="text-base font-bold text-slate-900">{title}</h3>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-blue-50"><X size={18} /></button>
+    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 print:hidden animate-fade-in">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 max-w-md w-full">
+        <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+          <h3 className="text-base font-bold text-slate-100">{title}</h3>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"><X size={18} /></button>
         </div>
         {children}
       </div>
@@ -931,18 +934,18 @@ function Modal({ title, onClose, children }) {
 
 function AdmissionFormModal({ student, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 my-8 print:shadow-none print:max-w-none print:rounded-none">
-        <div className="flex justify-between items-center border-b border-blue-100 pb-4 mb-5 print:hidden">
-          <h3 className="font-bold text-slate-900">Printable Admission Form</h3>
+    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full p-6 my-8 print:shadow-none print:max-w-none print:rounded-none print:bg-white print:text-black">
+        <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-5 print:hidden">
+          <h3 className="font-bold text-slate-100">Printable Admission Form</h3>
           <div className="flex gap-2">
-            <button onClick={() => window.print()} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Print / PDF</button>
-            <button onClick={onClose} className="p-2 rounded-xl hover:bg-blue-50"><X size={18} /></button>
+            <button onClick={() => window.print()} className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors">Print / PDF</button>
+            <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-slate-200"><X size={18} /></button>
           </div>
         </div>
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Student Admission Form</h1>
-          <p className="text-sm text-slate-500">Admission Number: {student.admissionNumber || 'Pending'}</p>
+          <h1 className="text-2xl font-bold text-slate-100">Student Admission Form</h1>
+          <p className="text-sm text-slate-400 mt-1">Admission Number: {student.admissionNumber || 'Pending'}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <PrintRow label="Student Name" value={student.personalDetails?.studentName} />
@@ -967,9 +970,9 @@ function AdmissionFormModal({ student, onClose }) {
 
 function PrintRow({ label, value, wide = false }) {
   return (
-    <div className={`border border-blue-100 rounded-xl p-3 ${wide ? 'md:col-span-2' : ''}`}>
-      <span className="text-xs uppercase tracking-wider text-slate-500 font-bold block">{label}</span>
-      <span className="text-slate-900 font-semibold">{value || '-'}</span>
+    <div className={`border border-slate-800/80 rounded-xl p-3 bg-slate-950/40 ${wide ? 'md:col-span-2' : ''}`}>
+      <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block">{label}</span>
+      <span className="text-slate-100 font-semibold">{value || '-'}</span>
     </div>
   );
 }

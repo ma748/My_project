@@ -200,7 +200,11 @@ html[data-theme='light'] [class*="text-slate-350"],
 html[data-theme='light'] [class*="text-slate-400"],
 html[data-theme='light'] [class*="text-slate-450"],
 html[data-theme='light'] [class*="text-slate-500"] {
-  color: #64748b;
+  color: #334155;
+}
+
+html[data-theme='light'] [class*="text-slate-600"] {
+  color: #1e293b;
 }
 
 html[data-theme='light'] [class*="hover:bg-slate-800"]:hover,
@@ -212,8 +216,19 @@ html[data-theme='light'] [class*="hover:bg-slate-850"]:hover {
 html[data-theme='light'] select,
 html[data-theme='light'] textarea,
 html[data-theme='light'] input {
-  color: var(--text-main);
+  color: #0f172a !important;
   background-color: var(--input-bg);
+  border-color: rgba(15, 23, 42, 0.16);
+}
+
+select option {
+  background-color: var(--surface-strong);
+  color: var(--text-main);
+}
+
+::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.85;
 }
 
 .office-brand-mark > span,
