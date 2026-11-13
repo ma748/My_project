@@ -283,3 +283,7 @@ npm run preview
 
 ## 📄 License
 This project is licensed under the [MIT License](LICENSE).
+
+
+Intelligence plus charecter is the goal of true education 
+- Martin luther king jr

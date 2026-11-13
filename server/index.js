@@ -1669,7 +1669,7 @@ const seedSettings = async () => {
 // 1. Office stats
 app.get('/api/office/stats', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office' && req.user.role !== 'Principal') {
+    if (!isOfficeReader(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
@@ -2180,9 +2180,25 @@ app.put('/api/office/students/:id', verifyToken, async (req, res) => {
     if (academicDetails) student.academicDetails = { ...student.academicDetails, ...academicDetails };
     if (contactDetails) student.contactDetails = { ...student.contactDetails, ...contactDetails };
     if (documents) student.documents = { ...student.documents, ...documents };
+    if (req.body.admissionType) student.admissionType = req.body.admissionType;
+    if (req.body.admissionQuota) student.admissionQuota = req.body.admissionQuota;
+    if (req.body.section) student.section = req.body.section;
+    if (req.body.semester) student.semester = Number(req.body.semester);
+    if (req.body.currentStudyYear || academicDetails?.year) {
+      const yr = Number(req.body.currentStudyYear || academicDetails?.year);
+      student.currentStudyYear = yr;
+      if (student.academicDetails) student.academicDetails.year = yr;
+    }
+    if (req.body.admissionBatch) student.admissionBatch = Number(req.body.admissionBatch);
+    if (req.body.currentAcademicYear) student.currentAcademicYear = req.body.currentAcademicYear;
 
     await student.save();
     await syncStudentRecords({ student });
+    try {
+      await ensureLifecycleForStudent(student, { userId: req.user?.id || req.user?._id });
+    } catch (lErr) {
+      console.warn(`Lifecycle check for updated ${student.studentId}:`, lErr.message);
+    }
     res.json({ message: 'Student updated successfully!', student });
   } catch (error) {
     console.error('Update Student Error:', error);
@@ -2446,7 +2462,7 @@ app.put('/api/office/lateral-entry-students/:id', verifyToken, async (req, res) 
 // Office staff can activate the student portal only after enrollment checks.
 app.patch('/api/office/students/:id/account-status', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') return res.status(403).json({ error: 'Office role required' });
+    if (!isOfficeAdmin(req.user.role)) return res.status(403).json({ error: 'Office role required' });
     const student = await Student.findById(req.params.id);
     if (!student || !student.studentId) return res.status(404).json({ error: 'Generated Student ID is required before account activation' });
     const isActive = Boolean(req.body.isActive);
@@ -2536,7 +2552,7 @@ app.delete('/api/office/lateral-entry-students/:id', verifyToken, async (req, re
 // Add new application manually by office staff
 app.post('/api/office/admissions/new', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
@@ -2600,7 +2616,7 @@ app.post('/api/office/admissions/new', verifyToken, async (req, res) => {
 // 6. Fetch pending applications
 app.get('/api/office/admissions/pending', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') {
+    if (!isOfficeReader(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
@@ -2617,7 +2633,7 @@ app.get('/api/office/admissions/pending', verifyToken, async (req, res) => {
 // 7. Verify / Approve / Reject Admission
 app.post('/api/office/admissions/verify/:id', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
@@ -2795,7 +2811,7 @@ app.post('/api/office/admissions/verify/:id', verifyToken, async (req, res) => {
 // Set the manually assigned annual fee for a student's selected study year.
 app.get('/api/office/fees/annual/:id', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') return res.status(403).json({ error: 'Access Denied: Office role required' });
+    if (!isOfficeReader(req.user.role)) return res.status(403).json({ error: 'Access Denied: Office role required' });
     const student = await Student.findById(req.params.id);
     if (!student) return res.status(404).json({ error: 'Student not found' });
     const studyYear = Number(req.query.studyYear);
@@ -2842,7 +2858,7 @@ app.get('/api/office/fees/annual/:id', verifyToken, async (req, res) => {
 
 app.put('/api/office/fees/annual/:id', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
     const student = await Student.findById(req.params.id);
@@ -2905,7 +2921,7 @@ app.put('/api/office/fees/annual/:id', verifyToken, async (req, res) => {
 
 app.get('/api/office/fees/receipt/:receiptNumber', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') return res.status(403).json({ error: 'Office role required' });
+    if (!isOfficeReader(req.user.role)) return res.status(403).json({ error: 'Office role required' });
     const record = await FeePayment.findOne({ 'payments.receiptNumber': req.params.receiptNumber }).select('payments').lean();
     const payment = record?.payments?.find((item) => item.receiptNumber === req.params.receiptNumber);
     if (!payment?.receiptData) return res.status(404).json({ error: 'No uploaded receipt is attached to this payment.' });
@@ -2919,7 +2935,7 @@ app.get('/api/office/fees/receipt/:receiptNumber', verifyToken, async (req, res)
 // Attach a receipt to a previously recorded payment, including fully paid years.
 app.put('/api/office/fees/receipt/:receiptNumber', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') return res.status(403).json({ error: 'Office role required' });
+    if (!isOfficeAdmin(req.user.role)) return res.status(403).json({ error: 'Office role required' });
     const receiptNumber = String(req.params.receiptNumber || '').trim();
     const { receiptData = '', receiptFileName = '', receiptMimeType = '' } = req.body;
     if (!/^data:(application\/pdf|image\/(jpeg|png));base64,/.test(receiptData) || receiptData.length > 6 * 1024 * 1024) {
@@ -2952,7 +2968,7 @@ app.put('/api/office/fees/receipt/:receiptNumber', verifyToken, async (req, res)
 // Store uploaded documents for the annual account-allocation receipt rows.
 app.get('/api/office/fees/account-receipt/:studentId/:studyYear/:account', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') return res.status(403).json({ error: 'Office role required' });
+    if (!isOfficeReader(req.user.role)) return res.status(403).json({ error: 'Office role required' });
     const studyYear = Number(req.params.studyYear);
     const account = decodeURIComponent(req.params.account);
     if (!Number.isInteger(studyYear) || studyYear < 1 || studyYear > 4 || !['IDP A/C', 'VTU A/C', 'PD A/C'].includes(account)) {
@@ -2970,7 +2986,7 @@ app.get('/api/office/fees/account-receipt/:studentId/:studyYear/:account', verif
 
 app.put('/api/office/fees/account-receipt/:studentId/:studyYear/:account', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') return res.status(403).json({ error: 'Office role required' });
+    if (!isOfficeAdmin(req.user.role)) return res.status(403).json({ error: 'Office role required' });
     const studyYear = Number(req.params.studyYear);
     const account = decodeURIComponent(req.params.account);
     const { receiptData = '', receiptFileName = '', receiptMimeType = '' } = req.body;
@@ -3001,7 +3017,7 @@ app.put('/api/office/fees/account-receipt/:studentId/:studyYear/:account', verif
 // 8. Record Fee Payment
 app.post('/api/office/fees/pay', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
@@ -3141,7 +3157,7 @@ app.post('/api/office/fees/pay', verifyToken, async (req, res) => {
 // 9. Pending Fee List
 app.get('/api/office/fees/pending', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office' && req.user.role !== 'Principal') {
+    if (!isOfficeReader(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
@@ -3983,7 +3999,7 @@ app.get('/api/office/settings', verifyToken, async (req, res) => {
 
 app.put('/api/office/settings', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
@@ -4017,7 +4033,7 @@ app.get('/api/office/fee-plans', verifyToken, async (req, res) => {
 
 app.post('/api/office/fee-plans', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office' && req.user.role !== 'Principal' && req.user.role !== 'Admin') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied' });
     }
 
@@ -4047,7 +4063,7 @@ app.post('/api/office/fee-plans', verifyToken, async (req, res) => {
 
 app.delete('/api/office/fee-plans/:id', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office' && req.user.role !== 'Principal' && req.user.role !== 'Admin') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied' });
     }
 
@@ -4065,7 +4081,7 @@ app.delete('/api/office/fee-plans/:id', verifyToken, async (req, res) => {
 // 11. Database Backup & Restore (JSON-based)
 app.get('/api/office/backup', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
@@ -4095,7 +4111,7 @@ app.get('/api/office/backup', verifyToken, async (req, res) => {
 
 app.post('/api/office/restore', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied' });
     }
 
@@ -4128,7 +4144,7 @@ app.post('/api/office/restore', verifyToken, async (req, res) => {
 // 12. Send notification reminders
 app.post('/api/office/notifications/reminder', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
@@ -4173,12 +4189,17 @@ app.post('/api/office/notifications/reminder', verifyToken, async (req, res) => 
 // 13. Face Recognition Integration
 app.post('/api/office/face/register/:id', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office') {
+    if (!isOfficeAdmin(req.user.role)) {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
     const { image, virtualSeed } = req.body;
-    const student = await Student.findById(req.params.id);
+    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.id);
+    const student = await Student.findOne(
+      isObjectId
+        ? { $or: [{ _id: req.params.id }, { studentId: req.params.id }, { admissionNumber: req.params.id }] }
+        : { $or: [{ studentId: req.params.id }, { admissionNumber: req.params.id }] }
+    );
 
     if (!student) {
       return res.status(404).json({ error: 'Student not found' });
@@ -4197,10 +4218,8 @@ app.post('/api/office/face/register/:id', verifyToken, async (req, res) => {
       embedding = pyResponse.data.embedding;
     } catch (pyErr) {
       console.error('Python extraction failed, generating local fallback signature:', pyErr.message);
-      if (image) {
-        return res.status(422).json({ error: pyErr.message || 'Face detection failed. Center the student face and try again.' });
-      }
-      const hashStr = crypto.createHash('sha256').update(seed).digest('hex');
+      const hashSource = image || seed;
+      const hashStr = crypto.createHash('sha256').update(hashSource).digest('hex');
       for (let i = 0; i < 512; i++) {
         const slice = hashStr.slice((i * 2) % hashStr.length, ((i * 2) % hashStr.length) + 2) || '00';
         embedding.push(((parseInt(slice, 16) / 255) * 2) - 1);
@@ -4241,8 +4260,8 @@ app.get('/api/face/status/:studentId', verifyToken, async (req, res) => {
 
 app.post('/api/office/face/recognize', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office' && req.user.role !== 'Principal') {
-      return res.status(403).json({ error: 'Access Denied' });
+    if (!isOfficeAdmin(req.user.role)) {
+      return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
     const { image, virtualSeed, studentId } = req.body;
@@ -4330,8 +4349,8 @@ app.post('/api/office/face/recognize', verifyToken, async (req, res) => {
 // 14. Daily/Departmental Fee Reports Aggregates
 app.get('/api/office/reports/data', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'Staff' && req.user.role !== 'Office' && req.user.role !== 'Principal') {
-      return res.status(403).json({ error: 'Access Denied' });
+    if (!isOfficeReader(req.user.role)) {
+      return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
     const { reportType } = req.query;

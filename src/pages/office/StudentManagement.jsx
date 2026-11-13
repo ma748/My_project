@@ -711,7 +711,14 @@ export default function StudentManagement() {
                 familyDetails: keepProvidedFields(row.familyDetails),
                 academicDetails: keepProvidedFields(row.academicDetails),
                 contactDetails: keepProvidedFields(row.contactDetails),
-                documents: keepProvidedFields(row.documents)
+                documents: keepProvidedFields(row.documents),
+                admissionType: row.admissionType,
+                admissionQuota: row.admissionQuota,
+                section: row.section,
+                semester: row.semester,
+                currentStudyYear: row.currentStudyYear,
+                admissionBatch: row.admissionBatch,
+                currentAcademicYear: row.currentAcademicYear
               };
               await axios.put(`/api/office/students/${existing._id}`, changes, { headers });
               updated += 1;
