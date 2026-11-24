@@ -1,46 +1,25 @@
 import React from 'react';
 
-export function Button({ children, variant = 'primary', style, ...props }) {
-  const baseStyle = {
-    width: '100%',
-    padding: '0.75rem 1.5rem',
-    borderRadius: '0.5rem',
-    fontWeight: 600,
-    fontSize: '1rem',
-    border: 'none',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.5rem',
-    ...style
-  };
-
-  const variants = {
-    primary: {
-      backgroundColor: 'var(--accent-primary)',
-      color: 'white',
-      boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.4)',
-    },
-    secondary: {
-      backgroundColor: 'transparent',
-      color: 'var(--text-main)',
-      border: '1px solid var(--border-color)',
-    }
-  };
-
-  const variantStyle = variants[variant] || variants.primary;
+export function Button({ children, variant = 'primary', className = '', style, ...props }) {
+  const isPrimary = variant === 'primary';
 
   return (
     <button
-      style={{ ...baseStyle, ...variantStyle }}
-      onMouseOver={(e) => {
-        if (variant === 'primary') e.currentTarget.style.backgroundColor = 'var(--accent-hover)';
-        if (variant === 'secondary') e.currentTarget.style.backgroundColor = 'var(--button-secondary-hover)';
-      }}
-      onMouseOut={(e) => {
-        if (variant === 'primary') e.currentTarget.style.backgroundColor = 'var(--accent-primary)';
-        if (variant === 'secondary') e.currentTarget.style.backgroundColor = 'transparent';
-      }}
+      className={`
+        w-full inline-flex items-center justify-center gap-2
+        px-4 py-2.5 sm:py-3 rounded-xl
+        text-xs sm:text-sm md:text-base font-bold
+        cursor-pointer select-none
+        transition-all duration-200 active:scale-[0.98]
+        disabled:opacity-50 disabled:cursor-not-allowed
+        ${
+          isPrimary
+            ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 border border-blue-400/20'
+            : 'bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 hover:border-white/20'
+        }
+        ${className}
+      `}
+      style={style}
       {...props}
     >
       {children}

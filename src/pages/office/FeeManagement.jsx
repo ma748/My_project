@@ -576,7 +576,7 @@ export default function FeeManagement() {
 
             {/* 3. Receipt printable view (displays if active) */}
             {activeReceipt && (
-              <div className="bg-white text-slate-900 border border-slate-300 p-8 rounded-2xl shadow-xl space-y-6 print:border-none print:shadow-none print:p-0 print:m-0">
+              <div className="bg-white text-slate-900 border border-slate-300 p-4 sm:p-8 rounded-2xl shadow-xl space-y-4 sm:space-y-6 print:border-none print:shadow-none print:p-0 print:m-0">
                 <div className="flex justify-between items-center pb-4 border-b border-slate-350">
                   <div>
                     <h2 className="text-lg font-bold uppercase tracking-wide">GEC Mosalehosahalli</h2>

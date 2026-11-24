@@ -1,10 +1,10 @@
 import React from 'react';
 
-export function Input({ label, type = 'text', id, placeholder, ...props }) {
+export function Input({ label, type = 'text', id, placeholder, className = '', ...props }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
+    <div className="flex flex-col gap-1.5 mb-3 sm:mb-4">
       {label && (
-        <label htmlFor={id} style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-muted)' }}>
+        <label htmlFor={id} className="text-xs sm:text-sm font-semibold text-slate-300 dark:text-slate-300">
           {label}
         </label>
       )}
@@ -12,16 +12,16 @@ export function Input({ label, type = 'text', id, placeholder, ...props }) {
         type={type}
         id={id}
         placeholder={placeholder}
-        style={{
-          width: '100%',
-          padding: '0.75rem 1rem',
-          borderRadius: '0.5rem',
-          backgroundColor: 'var(--input-bg)',
-          border: '1px solid var(--border-color)',
-          color: 'var(--text-main)',
-          fontSize: '1rem',
-          boxSizing: 'border-box'
-        }}
+        className={`
+          w-full px-3.5 py-2.5 sm:py-3 rounded-xl
+          bg-slate-900/60 dark:bg-slate-950/60
+          border border-slate-700/70 dark:border-white/10
+          text-slate-100 placeholder-slate-500
+          text-sm sm:text-base outline-none
+          focus:border-blue-500 focus:ring-2 focus:ring-blue-500/25
+          transition-all duration-200
+          ${className}
+        `}
         {...props}
       />
     </div>

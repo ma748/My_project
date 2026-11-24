@@ -667,29 +667,29 @@ export default function AdmissionVerification({ initialTab = 'form' }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6 shadow-xl print:hidden">
+      <div className="neo-card-3d rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl print:hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex flex-wrap items-center gap-2.5 mb-3">
+            <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-3">
               <Link
                 to="/dashboard/office/admissions"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-all border border-blue-500/20"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all border border-blue-500/20 active:scale-95"
               >
-                <ArrowLeft size={14} /> Back to Admissions
+                <ArrowLeft size={14} /> Back
               </Link>
-              <span className="text-slate-400 dark:text-slate-600 select-none">•</span>
-              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] uppercase tracking-wider font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                Admission & Fee Management
+              <span className="text-slate-600 select-none">•</span>
+              <span className="nothing-pill text-[9px] sm:text-[10px] text-blue-400 bg-blue-500/10 border-blue-500/20">
+                ADM.VERIFY // 2026
               </span>
             </div>
-            <h2 className="text-2xl font-bold text-slate-100 mt-1">Student Admission Module</h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-100 tracking-tight">Student Admission Module</h2>
+            <p className="text-xs text-slate-400 mt-1 max-w-xl">
               {activeTab === 'search'
                 ? 'Search, review, and update existing admission records. Assign missing IDs or update educational details.'
                 : 'Fast intake, validation, draft save, and registration for Regular and Lateral Entry admissions.'}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             <TabButton active={activeTab === 'form'} onClick={() => { setEditStudent(null); setActiveTab('form'); }} icon={UserPlus} label="New Admission" />
             <TabButton active={activeTab === 'search'} onClick={() => setActiveTab('search')} icon={UserRoundCog} label="Update Admission" />
             <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={BarChart3} label="Analytics" />
@@ -698,7 +698,7 @@ export default function AdmissionVerification({ initialTab = 'form' }) {
       </div>
 
       {activeTab === 'form' && !batchSelected && (
-        <div className="max-w-4xl mx-auto bg-slate-900/50 border border-slate-800/80 rounded-3xl shadow-2xl overflow-hidden backdrop-blur-xl">
+        <div className="max-w-4xl mx-auto neo-card-3d rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden backdrop-blur-xl">
           <div className="p-7 md:p-9 bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 text-white">
             <div className="h-11 w-11 rounded-xl bg-white/15 flex items-center justify-center mb-5"><GraduationCap size={23} /></div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-100">Admission workspace</p>
@@ -748,7 +748,7 @@ export default function AdmissionVerification({ initialTab = 'form' }) {
       )}
 
       {activeTab === 'form' && batchSelected && (
-        <div className="bg-slate-900/50 border border-slate-800/80 rounded-3xl shadow-xl overflow-hidden backdrop-blur-xl">
+        <div className="neo-card-3d rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden backdrop-blur-xl">
           <div className="p-6 border-b border-slate-800/80 bg-slate-950/40 print:hidden">
             {editStudent && (
               <div className="mb-4 p-3.5 rounded-xl bg-violet-500/10 border border-violet-500/30 text-xs text-violet-300 flex items-center justify-between gap-3">
@@ -1383,13 +1383,13 @@ function TabButton({ active, onClick, icon: Icon, label }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+      className={`inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-bold border transition-all active:scale-[0.98] ${
         active
-          ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20'
-          : 'bg-slate-800/40 border-slate-700/60 text-slate-300 hover:bg-slate-800 hover:text-slate-100'
+          ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/25 ring-1 ring-blue-400/30'
+          : 'bg-slate-800/50 border-slate-700/60 text-slate-300 hover:bg-slate-800 hover:text-slate-100'
       }`}
     >
-      <Icon size={15} /> {label}
+      <Icon size={14} className="sm:w-[15px] sm:h-[15px]" /> <span>{label}</span>
     </button>
   );
 }
@@ -1397,8 +1397,13 @@ function TabButton({ active, onClick, icon: Icon, label }) {
 function FormGrid({ title, children }) {
   return (
     <div>
-      <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-4">{title}</h4>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{children}</div>
+      <div className="flex items-center gap-2 mb-3 sm:mb-4">
+        <span className="nothing-pill text-[9px] sm:text-[10px] text-blue-400 bg-blue-500/10 border-blue-500/20">
+          SECTION
+        </span>
+        <h4 className="text-[11px] sm:text-xs font-mono font-bold text-slate-200 tracking-wide uppercase">{title}</h4>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-4">{children}</div>
     </div>
   );
 }
@@ -1406,7 +1411,7 @@ function FormGrid({ title, children }) {
 function Field({ label, value, onChange, error, placeholder, type = 'text', required = false, disabled = false }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold text-slate-300">
+      <span className="text-[11px] sm:text-xs font-semibold text-slate-300">
         {label}
         {required && <span className="text-rose-500"> *</span>}
       </span>
@@ -1416,11 +1421,11 @@ function Field({ label, value, onChange, error, placeholder, type = 'text', requ
         placeholder={placeholder}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className={`mt-1.5 w-full px-3.5 py-2.5 rounded-xl bg-slate-950/40 border text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 transition-colors ${
-          error ? 'border-rose-500/80 ring-1 ring-rose-500/40' : 'border-slate-800'
+        className={`mt-1 sm:mt-1.5 w-full px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-slate-950/50 border text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 transition-all ${
+          error ? 'border-rose-500/80 ring-1 ring-rose-500/40' : 'border-slate-800 hover:border-slate-700'
         }`}
       />
-      {error && <span className="text-[11px] text-rose-400 mt-1 block font-medium">{error}</span>}
+      {error && <span className="text-[10px] sm:text-[11px] text-rose-400 mt-1 block font-medium">{error}</span>}
     </label>
   );
 }
@@ -1428,13 +1433,13 @@ function Field({ label, value, onChange, error, placeholder, type = 'text', requ
 function SelectField({ label, value, onChange, options, error, disabled = false }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold text-slate-300">{label}</span>
+      <span className="text-[11px] sm:text-xs font-semibold text-slate-300">{label}</span>
       <select
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className={`mt-1.5 w-full px-3.5 py-2.5 rounded-xl bg-slate-950/40 border text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 transition-colors ${
-          error ? 'border-rose-500/80 ring-1 ring-rose-500/40' : 'border-slate-800'
+        className={`mt-1 sm:mt-1.5 w-full px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-slate-950/50 border text-xs sm:text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 transition-all ${
+          error ? 'border-rose-500/80 ring-1 ring-rose-500/40' : 'border-slate-800 hover:border-slate-700'
         }`}
       >
         {options.map((option) => (
@@ -1443,7 +1448,7 @@ function SelectField({ label, value, onChange, options, error, disabled = false 
           </option>
         ))}
       </select>
-      {error && <span className="text-[11px] text-rose-400 mt-1 block font-medium">{error}</span>}
+      {error && <span className="text-[10px] sm:text-[11px] text-rose-400 mt-1 block font-medium">{error}</span>}
     </label>
   );
 }
@@ -1451,7 +1456,7 @@ function SelectField({ label, value, onChange, options, error, disabled = false 
 function TextArea({ label, value, onChange, error, required = false, disabled = false }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold text-slate-300">
+      <span className="text-[11px] sm:text-xs font-semibold text-slate-300">
         {label}
         {required && <span className="text-rose-500"> *</span>}
       </span>

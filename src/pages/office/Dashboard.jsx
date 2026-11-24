@@ -307,17 +307,17 @@ export default function OfficeDashboard() {
       {/* Main Content Pane */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header Bar */}
-        <header className={`h-16 border-b backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-10 w-full transition-colors duration-200 ${
+        <header className={`h-14 sm:h-16 border-b backdrop-blur-md flex items-center justify-between px-3 sm:px-6 sticky top-0 z-10 w-full transition-colors duration-200 ${
           isDarkMode ? 'bg-[#0f172a]/90 border-slate-800' : 'bg-white/95 border-slate-200 shadow-sm'
         }`}>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(true)} className={`p-2 -ml-2 rounded-lg lg:hidden ${isDarkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'}`}>
-              <Menu size={20} />
+          <div className="flex items-center gap-2.5 sm:gap-4">
+            <button onClick={() => setSidebarOpen(true)} className={`p-1.5 sm:p-2 -ml-1 sm:-ml-2 rounded-lg lg:hidden ${isDarkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'}`}>
+              <Menu size={18} className="sm:w-5 sm:h-5" />
             </button>
-            <h1 className="text-lg font-bold flex items-center gap-2">
-              <span className="text-blue-500">GECM</span>
-              <span className={isDarkMode ? 'text-slate-500' : 'text-slate-400'}>/</span>
-              <span className={`font-medium text-sm lg:text-base ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+            <h1 className="text-sm sm:text-lg font-bold flex items-center gap-1.5 sm:gap-2">
+              <span className="text-blue-500 font-mono tracking-wider">GECM</span>
+              <span className={isDarkMode ? 'text-slate-600' : 'text-slate-400'}>/</span>
+              <span className={`font-semibold text-xs sm:text-sm lg:text-base truncate max-w-[170px] sm:max-w-none ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                 {location.pathname === '/dashboard/office' ? 'Office Admin Hub' : 
                  location.pathname.includes('admissions') ? 'Admissions Verification' :
                  location.pathname.includes('fees') ? 'Fee Management' :
@@ -326,51 +326,56 @@ export default function OfficeDashboard() {
             </h1>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <ThemeToggle />
-            <div className="h-8 w-8 rounded-full bg-blue-600/10 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-sm">
+            <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-blue-600/10 border border-blue-500/30 flex items-center justify-center text-blue-400 font-mono font-bold text-xs sm:text-sm">
               O
             </div>
           </div>
         </header>
         
         {/* Scrollable View Area */}
-        <main className={`flex-1 overflow-auto p-4 md:p-8 transition-colors duration-200 ${
+        <main className={`flex-1 overflow-auto p-3 sm:p-6 md:p-8 transition-colors duration-200 ${
           isDarkMode ? 'bg-[#0b0f19]' : 'bg-[#f5f7fb]'
         }`}>
           {location.pathname === '/dashboard/office' ? (
-            <div className="animate-fade-in max-w-6.5xl mx-auto space-y-8">
+            <div className="animate-fade-in max-w-6.5xl mx-auto space-y-4 sm:space-y-8">
               
               {/* Header Hero Section */}
-              <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-br from-slate-900 via-[#131e35] to-[#0f1d3a] border border-blue-500/10 shadow-xl relative overflow-hidden">
+              <div className="p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900 via-[#131e35] to-[#0f1d3a] neo-card-3d relative overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.2),transparent_28%),linear-gradient(135deg,rgba(16,185,129,0.12),transparent_44%)]"></div>
-                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 lg:items-center">
+                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 sm:gap-6 lg:items-center">
                   <div className="max-w-3xl">
-                    <blockquote className="mt-2">
-                      <p className="text-2xl md:text-4xl font-extrabold text-slate-100 leading-tight tracking-normal">
+                    <div className="inline-flex items-center gap-2 mb-2 sm:mb-3">
+                      <span className="nothing-pill text-[9px] sm:text-[10px] text-blue-400 bg-blue-500/10 border-blue-500/20">
+                        VISION // GECM
+                      </span>
+                    </div>
+                    <blockquote className="mt-1">
+                      <p className="text-base sm:text-xl md:text-3xl font-black text-slate-100 leading-snug sm:leading-tight tracking-tight">
                         "Education is the foundation of progress. It shapes character, strengthens the mind, and builds a nation of capable, disciplined citizens."
                       </p>
-                      <footer className="mt-4 text-sm md:text-base text-slate-350 font-semibold">- Sir M. Visvesvaraya</footer>
+                      <footer className="mt-2.5 sm:mt-4 text-xs sm:text-sm text-slate-400 font-semibold font-mono">- SIR M. VISVESVARAYA</footer>
                     </blockquote>
                   </div>
                   <div className="w-full max-w-sm lg:justify-self-end">
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-950/30 border border-slate-800/60 shadow-lg">
+                    <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-950/40 border border-slate-800/60 shadow-lg">
                       <img
                         src="/sir-mv-visvesvaraya.png"
                         alt="Sir M. Visvesvaraya"
-                        className="h-28 w-24 md:h-36 md:w-28 rounded-xl object-cover object-top border border-blue-500/20 shadow-xl"
+                        className="h-20 w-16 sm:h-28 sm:w-24 md:h-32 md:w-26 rounded-lg sm:rounded-xl object-cover object-top border border-blue-500/20 shadow-xl"
                       />
                       <div>
-                        <span className="text-[10px] uppercase tracking-wider font-bold text-blue-400">Bharat Ratna</span>
-                        <h2 className="text-lg font-extrabold text-slate-100 mt-1 leading-tight">Sir M. Visvesvaraya</h2>
-                        <p className="text-xs text-slate-350 mt-2 leading-relaxed">Engineer, statesman, and visionary</p>
+                        <span className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider font-bold text-blue-400">Bharat Ratna</span>
+                        <h2 className="text-sm sm:text-lg font-extrabold text-slate-100 mt-0.5 leading-tight">Sir M. Visvesvaraya</h2>
+                        <p className="text-[11px] sm:text-xs text-slate-400 mt-1 sm:mt-2 leading-relaxed">Engineer, statesman, and visionary</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <section className="rounded-3xl border border-slate-800/80 bg-slate-900/55 p-6 shadow-xl">
+              <section className="neo-card-3d rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
                 <div className="mb-6 flex items-center justify-between gap-4">
                   <div>
                     <h2 className="flex items-center gap-2 text-base font-bold text-slate-100">
@@ -427,7 +432,7 @@ export default function OfficeDashboard() {
                 )}
               </section>
 
-              <section className="rounded-3xl border border-slate-800/80 bg-slate-900/55 p-6 shadow-xl">
+              <section className="neo-card-3d rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
                 <div className="mb-6 flex items-center justify-between gap-4">
                   <div>
                     <h2 className="flex items-center gap-2 text-base font-bold text-slate-100">

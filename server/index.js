@@ -2534,7 +2534,16 @@ app.put('/api/office/students/:id', verifyToken, async (req, res) => {
     }
 
     // Merge changes
-    if (personalDetails) student.personalDetails = { ...student.personalDetails, ...personalDetails };
+    if (personalDetails) {
+      const mergedPersonal = { ...student.personalDetails?.toObject?.() || student.personalDetails, ...personalDetails };
+      if (mergedPersonal.cetNumber !== undefined) {
+        mergedPersonal.cetNumber = String(mergedPersonal.cetNumber || '').trim() || undefined;
+      }
+      if (mergedPersonal.aadhaarNumber !== undefined) {
+        mergedPersonal.aadhaarNumber = String(mergedPersonal.aadhaarNumber || '').trim() || undefined;
+      }
+      student.personalDetails = mergedPersonal;
+    }
     if (familyDetails) student.familyDetails = { ...student.familyDetails, ...familyDetails };
     if (academicDetails) student.academicDetails = { ...student.academicDetails, ...academicDetails };
     if (contactDetails) student.contactDetails = { ...student.contactDetails, ...contactDetails };
@@ -2963,6 +2972,13 @@ app.post('/api/office/admissions/new', verifyToken, async (req, res) => {
     const studentId = String(req.body.studentId || '').trim().toUpperCase() || undefined;
     const usn = String(req.body.usn || '').trim().toUpperCase() || undefined;
     const admissionNumber = String(req.body.admissionNumber || '').trim().toUpperCase() || undefined;
+
+    if (personalDetails.cetNumber !== undefined) {
+      personalDetails.cetNumber = String(personalDetails.cetNumber || '').trim() || undefined;
+    }
+    if (personalDetails.aadhaarNumber !== undefined) {
+      personalDetails.aadhaarNumber = String(personalDetails.aadhaarNumber || '').trim() || undefined;
+    }
 
     // Check for collisions only on non-empty unique fields
     const orConditions = [];

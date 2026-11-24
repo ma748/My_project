@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 
 const studentSchema = new mongoose.Schema({
   personalDetails: {
-    cetNumber: { type: String, required: true, unique: true },
+    cetNumber: { type: String, sparse: true, index: true },
     cetRank: { type: Number, default: 0 },
     studentName: { type: String, required: true },
     dob: { type: Date, default: () => new Date('2005-01-01') },
@@ -12,7 +12,7 @@ const studentSchema = new mongoose.Schema({
     religion: { type: String, default: 'Hindu' },
     category: { type: String, default: 'General' },
     subCaste: { type: String, default: '' },
-    aadhaarNumber: { type: String, required: true, unique: true },
+    aadhaarNumber: { type: String, sparse: true, index: true },
     physicallyChallenged: { type: String, default: 'No' },
   },
   familyDetails: {
@@ -112,7 +112,7 @@ const studentSchema = new mongoose.Schema({
   },
   admissionQuota: {
     type: String,
-    enum: ['CET', 'Management', 'SNQ', 'KEA-Regular', 'KEA-SNQ', 'Lateral Entry', 'Other'],
+    enum: ['CET', 'Government', 'General', 'Management', 'SNQ', 'KEA', 'KEA-Regular', 'KEA-SNQ', 'Lateral Entry', 'Other'],
     default: 'CET'
   },
   section: { type: String, default: 'A' },
