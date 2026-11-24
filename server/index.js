@@ -1324,7 +1324,7 @@ app.put('/api/student/documents/:documentType', verifyToken, async (req, res) =>
     if (String(req.user.role || '').toLowerCase() !== 'student' || req.user.studentType === 'lateral') {
       return res.status(403).json({ error: 'Document upload is available for regular student profiles.' });
     }
-    const allowedTypes = ['aadhaar', 'marksCard', 'photo'];
+    const allowedTypes = ['aadhaar', 'marksCard', 'photo', 'idpReceipt', 'vtuReceipt', 'pdReceipt', 'keaReceipt', 'feeReceipt'];
     const { documentType } = req.params;
     const data = String(req.body.data || '');
     const mimeType = String(req.body.mimeType || '').toLowerCase();
@@ -1340,10 +1340,173 @@ app.put('/api/student/documents/:documentType', verifyToken, async (req, res) =>
     if (!student) return res.status(404).json({ error: 'Student not found.' });
     student.documents = { ...student.documents?.toObject?.(), [documentType]: data };
     await student.save();
+
+    // If it's a fee receipt, synchronize with FeePayment for student's current study year
+    const receiptAccountMap = {
+      idpReceipt: 'IDP A/C',
+      vtuReceipt: 'VTU A/C',
+      pdReceipt: 'PD A/C',
+      keaReceipt: 'KEA A/C',
+      feeReceipt: 'PD A/C'
+    };
+    const targetAccount = receiptAccountMap[documentType];
+    if (targetAccount) {
+      const studyYear = Number(student.currentStudyYear || 1);
+      const academicYear = getAcademicYearForStudyYear(student, studyYear) || student.currentAcademicYear || await getCurrentAcademicYear();
+      let fee = await FeePayment.findOne({ student: student._id, studyYear });
+      if (!fee) {
+        fee = new FeePayment({
+          student: student._id,
+          studentId: student.studentId || String(student._id),
+          academicYear,
+          studyYear,
+          accountReceipts: []
+        });
+      }
+      let accReceipt = fee.accountReceipts.find((item) => item.account === targetAccount);
+      if (!accReceipt) {
+        fee.accountReceipts.push({ account: targetAccount });
+        accReceipt = fee.accountReceipts[fee.accountReceipts.length - 1];
+      }
+      accReceipt.receiptData = data;
+      accReceipt.receiptFileName = `${documentType}_${studyYear}.pdf`;
+      accReceipt.receiptMimeType = mimeType;
+      await fee.save();
+    }
+
     res.json({ documents: student.documents });
   } catch (error) {
     console.error('Student document upload failed:', error);
     res.status(500).json({ error: 'Unable to upload document.' });
+  }
+});
+
+// Student fee receipt endpoints for all accounts (IDP A/C, VTU A/C, PD A/C, KEA A/C)
+app.put('/api/student/fee/receipt', verifyToken, async (req, res) => {
+  try {
+    if (String(req.user.role || '').toLowerCase() !== 'student') {
+      return res.status(403).json({ error: 'Student role required.' });
+    }
+    const studyYear = Number(req.body.studyYear);
+    const account = String(req.body.account || '').trim();
+    const { receiptData = '', receiptFileName = '', receiptMimeType = 'application/pdf' } = req.body;
+
+    const validAccounts = ['IDP A/C', 'VTU A/C', 'PD A/C', 'KEA A/C', 'KEA'];
+    if (!Number.isInteger(studyYear) || studyYear < 1 || studyYear > 4 || !validAccounts.includes(account)) {
+      return res.status(400).json({ error: 'Invalid study year or fee account.' });
+    }
+    if (!/^data:(application\/pdf|image\/(jpeg|png));base64,/.test(receiptData)) {
+      return res.status(400).json({ error: 'Receipt must be a PDF, JPG, or PNG file.' });
+    }
+    const base64 = receiptData.slice(receiptData.indexOf(',') + 1);
+    if (!base64 || Buffer.byteLength(base64, 'base64') > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Receipt must be 5 MB or smaller.' });
+    }
+
+    const student = await Student.findById(req.user.id);
+    if (!student) return res.status(404).json({ error: 'Student not found.' });
+
+    const canonicalAccount = account === 'KEA' ? 'KEA A/C' : account;
+    const academicYear = getAcademicYearForStudyYear(student, studyYear) || student.currentAcademicYear || await getCurrentAcademicYear();
+    let fee = await FeePayment.findOne({ student: student._id, studyYear });
+    if (!fee) {
+      fee = new FeePayment({
+        student: student._id,
+        studentId: student.studentId || String(student._id),
+        academicYear,
+        studyYear,
+        accountReceipts: []
+      });
+    }
+
+    let receipt = fee.accountReceipts.find((item) => item.account === canonicalAccount || item.account === account);
+    if (!receipt) {
+      fee.accountReceipts.push({ account: canonicalAccount });
+      receipt = fee.accountReceipts[fee.accountReceipts.length - 1];
+    }
+    receipt.receiptData = receiptData;
+    receipt.receiptFileName = String(receiptFileName || `${canonicalAccount.replace(/\s+/g, '_')}_receipt`).slice(0, 255);
+    receipt.receiptMimeType = receiptMimeType;
+    await fee.save();
+
+    // Sync to student.documents if matching current study year
+    const currentYear = Number(student.currentStudyYear || 1);
+    if (studyYear === currentYear) {
+      const docUpdates = {};
+      if (canonicalAccount === 'IDP A/C') docUpdates.idpReceipt = receiptData;
+      else if (canonicalAccount === 'VTU A/C') docUpdates.vtuReceipt = receiptData;
+      else if (canonicalAccount === 'PD A/C') docUpdates.pdReceipt = receiptData;
+      else if (canonicalAccount === 'KEA A/C') docUpdates.keaReceipt = receiptData;
+      docUpdates.feeReceipt = receiptData;
+
+      student.documents = { ...student.documents?.toObject?.(), ...docUpdates };
+      await student.save();
+    }
+
+    res.json({
+      message: 'Receipt uploaded successfully.',
+      studyYear,
+      account: canonicalAccount,
+      fileName: receipt.receiptFileName,
+      mimeType: receipt.receiptMimeType
+    });
+  } catch (error) {
+    console.error('Student fee receipt upload error:', error);
+    res.status(500).json({ error: 'Failed to upload fee receipt.' });
+  }
+});
+
+app.get('/api/student/fee/receipt/:studyYear/:account', verifyToken, async (req, res) => {
+  try {
+    if (String(req.user.role || '').toLowerCase() !== 'student') {
+      return res.status(403).json({ error: 'Student role required.' });
+    }
+    const studyYear = Number(req.params.studyYear);
+    const account = decodeURIComponent(req.params.account);
+    const validAccounts = ['IDP A/C', 'VTU A/C', 'PD A/C', 'KEA A/C', 'KEA'];
+    if (!Number.isInteger(studyYear) || studyYear < 1 || studyYear > 4 || !validAccounts.includes(account)) {
+      return res.status(400).json({ error: 'Invalid study year or fee account.' });
+    }
+
+    const fee = await FeePayment.findOne({ student: req.user.id, studyYear }).select('accountReceipts').lean();
+    let receipt = fee?.accountReceipts?.find((item) => item.account === account || (account === 'KEA A/C' && item.account === 'KEA') || (account === 'KEA' && item.account === 'KEA A/C'));
+
+    if (!receipt || !receipt.receiptData) {
+      // Check student.documents fallback
+      const student = await Student.findById(req.user.id).select('documents currentStudyYear').lean();
+      const currentYear = Number(student?.currentStudyYear || 1);
+      if (studyYear === currentYear && student?.documents) {
+        let docData = null;
+        if (account === 'IDP A/C') docData = student.documents.idpReceipt;
+        else if (account === 'VTU A/C') docData = student.documents.vtuReceipt;
+        else if (account === 'PD A/C') docData = student.documents.pdReceipt;
+        else if (account === 'KEA A/C' || account === 'KEA') docData = student.documents.keaReceipt;
+        else docData = student.documents.feeReceipt;
+
+        if (docData) {
+          receipt = {
+            receiptData: docData,
+            receiptFileName: `${account.replace(/\s+/g, '_')}_receipt.pdf`,
+            receiptMimeType: 'application/pdf'
+          };
+        }
+      }
+    }
+
+    if (!receipt || !receipt.receiptData) {
+      return res.status(404).json({ error: 'No uploaded receipt found for this account.' });
+    }
+
+    res.json({
+      receiptData: receipt.receiptData,
+      fileName: receipt.receiptFileName || `${account}_receipt`,
+      mimeType: receipt.receiptMimeType || 'application/pdf',
+      account,
+      studyYear
+    });
+  } catch (error) {
+    console.error('Get student fee receipt error:', error);
+    res.status(500).json({ error: 'Failed to retrieve fee receipt.' });
   }
 });
 
@@ -1452,6 +1615,7 @@ app.get('/api/student/fee', verifyToken, async (req, res) => {
       fee.payments = [...(fee.payments || []), ...payments];
     }
 
+    const currentStudyYear = Number(student.currentStudyYear || 1);
     const yearWise = [...feeByYear.values()]
       .sort((a, b) => Number(a.studyYear) - Number(b.studyYear) || String(a.academicYear).localeCompare(String(b.academicYear)))
       .map((fee) => {
@@ -1460,6 +1624,35 @@ app.get('/api/student/fee', verifyToken, async (req, res) => {
         const pendingFee = Math.max(0, totalFee - paidFee);
         const latestPayment = (fee.payments || []).reduce((latest, payment) => !latest || new Date(payment.date || 0) > new Date(latest.date || 0) ? payment : latest, null);
         const academic = academicByYear.get(`${fee.academicYear}:${Number(fee.studyYear)}`);
+
+        // Build accountReceipts with student.documents fallback for current study year
+        const feeReceiptsMap = new Map();
+        (fee.accountReceipts || []).forEach((r) => {
+          if (r.receiptData) {
+            feeReceiptsMap.set(r.account, {
+              account: r.account,
+              fileName: r.receiptFileName || `${r.account} receipt`,
+              mimeType: r.receiptMimeType || 'application/pdf',
+              hasReceipt: true
+            });
+          }
+        });
+
+        if (Number(fee.studyYear) === currentStudyYear && student.documents) {
+          if (student.documents.idpReceipt && !feeReceiptsMap.has('IDP A/C')) {
+            feeReceiptsMap.set('IDP A/C', { account: 'IDP A/C', fileName: 'IDP_Receipt.pdf', mimeType: 'application/pdf', hasReceipt: true });
+          }
+          if (student.documents.vtuReceipt && !feeReceiptsMap.has('VTU A/C')) {
+            feeReceiptsMap.set('VTU A/C', { account: 'VTU A/C', fileName: 'VTU_Receipt.pdf', mimeType: 'application/pdf', hasReceipt: true });
+          }
+          if (student.documents.pdReceipt && !feeReceiptsMap.has('PD A/C')) {
+            feeReceiptsMap.set('PD A/C', { account: 'PD A/C', fileName: 'PD_Receipt.pdf', mimeType: 'application/pdf', hasReceipt: true });
+          }
+          if (student.documents.keaReceipt && !feeReceiptsMap.has('KEA A/C')) {
+            feeReceiptsMap.set('KEA A/C', { account: 'KEA A/C', fileName: 'KEA_Receipt.pdf', mimeType: 'application/pdf', hasReceipt: true });
+          }
+        }
+
         return {
           academicYear: fee.academicYear,
           studyYear: Number(fee.studyYear),
@@ -1468,7 +1661,8 @@ app.get('/api/student/fee', verifyToken, async (req, res) => {
           paidFee,
           pendingFee,
           paidOn: latestPayment?.date,
-          status: totalFee <= 0 ? 'Not Set' : pendingFee === 0 ? 'Paid' : paidFee > 0 ? 'Partial' : 'Pending'
+          status: totalFee <= 0 ? 'Not Set' : pendingFee === 0 ? 'Paid' : paidFee > 0 ? 'Partial' : 'Pending',
+          accountReceipts: Array.from(feeReceiptsMap.values())
         };
       });
 
@@ -2925,13 +3119,20 @@ app.get('/api/office/fees/annual/:id', verifyToken, async (req, res) => {
       : Number.isFinite(requestedDefaultTotal) && requestedDefaultTotal > 0
         ? requestedDefaultTotal
         : Number(fee?.totalFee || 0);
+    const receiptsMap = Object.fromEntries((fee?.accountReceipts || []).map((receipt) => [receipt.account, receipt.receiptFileName || '']));
+    if (studyYear === Number(student.currentStudyYear || 1) && student.documents) {
+      if (student.documents.idpReceipt && !receiptsMap['IDP A/C']) receiptsMap['IDP A/C'] = 'IDP_Receipt.pdf';
+      if (student.documents.vtuReceipt && !receiptsMap['VTU A/C']) receiptsMap['VTU A/C'] = 'VTU_Receipt.pdf';
+      if (student.documents.pdReceipt && !receiptsMap['PD A/C']) receiptsMap['PD A/C'] = 'PD_Receipt.pdf';
+      if (student.documents.keaReceipt && !receiptsMap['KEA A/C']) receiptsMap['KEA A/C'] = 'KEA_Receipt.pdf';
+    }
     res.json({
       breakdown,
       academicYear,
       totalFee,
       paidAmount,
       outstandingBalance: Math.max(0, totalFee - paidAmount),
-      accountReceipts: Object.fromEntries((fee?.accountReceipts || []).map((receipt) => [receipt.account, receipt.receiptFileName || '']))
+      accountReceipts: receiptsMap
     });
   } catch (error) {
     console.error('Get annual fee details error:', error);
@@ -3058,8 +3259,28 @@ app.get('/api/office/fees/account-receipt/:studentId/:studyYear/:account', verif
       return res.status(400).json({ error: 'Invalid study year or fee account.' });
     }
     const fee = await FeePayment.findOne({ student: req.params.studentId, studyYear }).select('accountReceipts').lean();
-    const receipt = fee?.accountReceipts?.find((item) => item.account === account);
-    if (!receipt) return res.status(404).json({ error: 'No uploaded receipt is attached to this account allocation.' });
+    let receipt = fee?.accountReceipts?.find((item) => item.account === account);
+    if (!receipt || !receipt.receiptData) {
+      // Fallback to student.documents for current study year
+      const student = await Student.findById(req.params.studentId).select('documents currentStudyYear').lean();
+      if (student && studyYear === Number(student.currentStudyYear || 1) && student.documents) {
+        let docData = null;
+        if (account === 'IDP A/C') docData = student.documents.idpReceipt;
+        else if (account === 'VTU A/C') docData = student.documents.vtuReceipt;
+        else if (account === 'PD A/C') docData = student.documents.pdReceipt;
+        else if (account === 'KEA A/C' || account === 'KEA') docData = student.documents.keaReceipt;
+        else docData = student.documents.feeReceipt;
+
+        if (docData) {
+          receipt = {
+            receiptData: docData,
+            receiptFileName: `${account.replace(/\s+/g, '_')}_receipt.pdf`,
+            receiptMimeType: 'application/pdf'
+          };
+        }
+      }
+    }
+    if (!receipt || !receipt.receiptData) return res.status(404).json({ error: 'No uploaded receipt is attached to this account allocation.' });
     res.json({ receiptData: receipt.receiptData, fileName: receipt.receiptFileName, mimeType: receipt.receiptMimeType });
   } catch (error) {
     console.error('Get account allocation receipt error:', error);

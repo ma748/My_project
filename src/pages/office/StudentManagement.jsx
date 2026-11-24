@@ -56,7 +56,7 @@ export default function StudentManagement() {
     familyDetails: { fatherName: '', motherName: '', parentContact: '', fatherOccupation: '', motherOccupation: '', annualIncome: '' },
     academicDetails: { qualifyingExam: 'PUC', board: 'State Board', state: 'Karnataka', region: 'Urban', allottedCategory: 'General', branch: 'CSE', feeCollected: '0', lateralEntry: 'No' },
     contactDetails: { studentContact: '', email: '', permanentAddress: '', correspondenceAddress: '', sameAsPermanent: true },
-    documents: { aadhaar: '', marksCard: '', photo: '' }
+    documents: { aadhaar: '', marksCard: '', photo: '', idpReceipt: '', vtuReceipt: '', pdReceipt: '', keaReceipt: '', feeReceipt: '' }
   };
   const [formData, setFormData] = useState(emptyForm);
 
@@ -1691,7 +1691,7 @@ export default function StudentManagement() {
                 {/* 4. Uploaded Verification Documents */}
                 <div className="bg-slate-950/20 p-5 rounded-2xl border border-slate-800/50 space-y-3 md:col-span-2">
                   <h5 className="text-[11px] font-bold uppercase tracking-wider text-blue-400 border-b border-slate-800/80 pb-1.5">Verification Documents</h5>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
 
                     <div>
                       <span className="text-[10px] text-slate-450 block mb-1">Aadhaar Card Attachment</span>
@@ -1722,6 +1722,70 @@ export default function StudentManagement() {
                         </a>
                       ) : (
                         <span className="text-xs text-slate-500 italic">No Marks Card document uploaded</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-slate-450 block mb-1">IDP Fee Receipt (Tuition)</span>
+                      {viewStudent.documents?.idpReceipt ? (
+                        <a
+                          href={viewStudent.documents.idpReceipt}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 p-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs text-emerald-400 font-semibold transition-colors"
+                        >
+                          <FileText size={15} /> Open IDP Fee Receipt
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-500 italic">No IDP receipt uploaded</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-slate-450 block mb-1">PD Fee Receipt (Development)</span>
+                      {viewStudent.documents?.pdReceipt ? (
+                        <a
+                          href={viewStudent.documents.pdReceipt}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 p-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs text-emerald-400 font-semibold transition-colors"
+                        >
+                          <FileText size={15} /> Open PD Fee Receipt
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-500 italic">No PD receipt uploaded</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-slate-450 block mb-1">VTU Fee Receipt (University)</span>
+                      {viewStudent.documents?.vtuReceipt ? (
+                        <a
+                          href={viewStudent.documents.vtuReceipt}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 p-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs text-emerald-400 font-semibold transition-colors"
+                        >
+                          <FileText size={15} /> Open VTU Fee Receipt
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-500 italic">No VTU receipt uploaded</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-slate-450 block mb-1">KEA Admission Challan / Receipt</span>
+                      {viewStudent.documents?.keaReceipt ? (
+                        <a
+                          href={viewStudent.documents.keaReceipt}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 p-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs text-blue-400 font-semibold transition-colors"
+                        >
+                          <FileText size={15} /> Open KEA Challan / Receipt
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-500 italic">No KEA receipt uploaded</span>
                       )}
                     </div>
 

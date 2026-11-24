@@ -110,7 +110,12 @@ const studentSchema = new mongoose.Schema({
   documents: {
     aadhaar: { type: String },
     marksCard: { type: String },
-    photo: { type: String }
+    photo: { type: String },
+    idpReceipt: { type: String },
+    vtuReceipt: { type: String },
+    pdReceipt: { type: String },
+    keaReceipt: { type: String },
+    feeReceipt: { type: String }
   },
   admissionStatus: {
     previousYear: { type: String, default: 'Inactive' },

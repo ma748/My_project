@@ -23,6 +23,7 @@ export default function StudentDashboard() {
   const [editRequests, setEditRequests] = useState([]);
   const [previewDocument, setPreviewDocument] = useState(null);
   const [uploadingDocument, setUploadingDocument] = useState('');
+  const [uploadingReceiptKey, setUploadingReceiptKey] = useState('');
   const [editForm, setEditForm] = useState({
     studentName: '',
     dob: '',
@@ -183,6 +184,79 @@ export default function StudentDashboard() {
     }
   };
 
+  const handleFeeReceiptUpload = async (studyYear, account, file) => {
+    if (!file) return;
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) return toast.error('Choose a PDF, JPG, or PNG file.');
+    if (file.size > 5 * 1024 * 1024) return toast.error('Receipt must be 5 MB or smaller.');
+    const key = `${studyYear}-${account}`;
+    setUploadingReceiptKey(key);
+    try {
+      const receiptData = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Could not read the selected file.'));
+        reader.readAsDataURL(file);
+      });
+      await axios.put('/api/student/fee/receipt', {
+        studyYear,
+        account,
+        receiptData,
+        receiptFileName: file.name,
+        receiptMimeType: file.type
+      }, { headers: getHeaders() });
+
+      // Refresh fee data
+      const res = await axios.get('/api/student/fee', { headers: getHeaders() });
+      setFeeObj(res.data);
+
+      // Also update documents in details state if current year
+      const docKeyMap = { 'IDP A/C': 'idpReceipt', 'VTU A/C': 'vtuReceipt', 'PD A/C': 'pdReceipt', 'KEA A/C': 'keaReceipt', 'KEA': 'keaReceipt' };
+      const docKey = docKeyMap[account];
+      if (docKey) {
+        setDetails((curr) => curr ? {
+          ...curr,
+          documents: { ...curr.documents, [docKey]: receiptData, feeReceipt: receiptData }
+        } : curr);
+      }
+
+      toast.success(`${account} fee receipt uploaded successfully!`);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to upload fee receipt.');
+    } finally {
+      setUploadingReceiptKey('');
+    }
+  };
+
+  const handleFeeReceiptView = async (studyYear, account) => {
+    try {
+      const res = await axios.get(`/api/student/fee/receipt/${studyYear}/${encodeURIComponent(account)}`, { headers: getHeaders() });
+      if (res.data?.receiptData) {
+        setPreviewDocument({
+          label: `${account} Receipt (Year ${studyYear})`,
+          src: res.data.receiptData,
+          fileName: res.data.fileName
+        });
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not load receipt preview.');
+    }
+  };
+
+  const handleFeeReceiptDownload = async (studyYear, account, fallbackFileName) => {
+    try {
+      const res = await axios.get(`/api/student/fee/receipt/${studyYear}/${encodeURIComponent(account)}`, { headers: getHeaders() });
+      if (res.data?.receiptData) {
+        const link = document.createElement('a');
+        link.href = res.data.receiptData;
+        link.download = res.data.fileName || fallbackFileName || `receipt-${account.replace(/\s+/g, '_')}-year${studyYear}`;
+        link.click();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not download receipt.');
+    }
+  };
+
   const fallbackStudentDetails = {
     personalDetails: {
       studentName: 'Dummy Student',
@@ -323,7 +397,10 @@ export default function StudentDashboard() {
     const documentStatus = [
       `Aadhaar: ${detailData.documents?.aadhaar ? 'Uploaded' : 'Not uploaded'}`,
       `Marks Card: ${detailData.documents?.marksCard ? 'Uploaded' : 'Not uploaded'}`,
-      `Photo: ${detailData.documents?.photo ? 'Uploaded' : 'Not uploaded'}`
+      `Photo: ${detailData.documents?.photo ? 'Uploaded' : 'Not uploaded'}`,
+      `IDP Receipt: ${detailData.documents?.idpReceipt ? 'Uploaded' : 'Not uploaded'}`,
+      `PD Receipt: ${detailData.documents?.pdReceipt ? 'Uploaded' : 'Not uploaded'}`,
+      `VTU Receipt: ${detailData.documents?.vtuReceipt ? 'Uploaded' : 'Not uploaded'}`
     ].join(' | ');
     const wrappedStatus = doc.splitTextToSize(documentStatus, 180);
     doc.text(wrappedStatus, 14, 190);
@@ -590,9 +667,13 @@ export default function StudentDashboard() {
               <h3 className="text-indigo-400 font-semibold mb-4 border-b border-white/5 pb-2">Documents Uploaded</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 {[
-                  { key: 'aadhaar', label: 'Aadhaar' },
+                  { key: 'aadhaar', label: 'Aadhaar Card' },
                   { key: 'marksCard', label: 'Marks Card' },
-                  { key: 'photo', label: 'Photo' }
+                  { key: 'photo', label: 'Student Photo' },
+                  { key: 'idpReceipt', label: 'IDP Fee Receipt (Tuition)' },
+                  { key: 'pdReceipt', label: 'PD Fee Receipt (Development)' },
+                  { key: 'vtuReceipt', label: 'VTU Fee Receipt (University)' },
+                  { key: 'keaReceipt', label: 'KEA Challan / Receipt' }
                 ].map(({ key, label }) => {
                   const documentSource = detailData.documents?.[key];
                   const previewSource = resolveDocumentSource(documentSource);
@@ -737,6 +818,86 @@ export default function StudentDashboard() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Fee Receipts Upload & View Section (IDP, PD, VTU) */}
+                  <div className="mt-5 pt-4 border-t border-white/5">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-3">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                        <FileText size={14} /> Fee Receipts by Account (IDP, PD, VTU)
+                      </h4>
+                      <span className="text-[11px] text-gray-400">Upload separate receipts for each fee allocation</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {[
+                        { account: 'IDP A/C', label: 'IDP A/C (Tuition)', description: 'Government tuition fee receipt' },
+                        { account: 'PD A/C', label: 'PD A/C (Development)', description: 'College development & amenities fee' },
+                        { account: 'VTU A/C', label: 'VTU A/C (University/Exam)', description: 'VTU registration, exam & e-consortium' }
+                      ].map(({ account, label, description }) => {
+                        const receiptInfo = (year.accountReceipts || []).find((r) => r.account === account);
+                        const isUploaded = Boolean(receiptInfo?.hasReceipt || receiptInfo?.fileName);
+                        const key = `${studyYear}-${account}`;
+                        const isBusy = uploadingReceiptKey === key;
+
+                        return (
+                          <div key={account} className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-3.5 flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-semibold text-slate-200">{label}</span>
+                                <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                                  isUploaded ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                }`}>
+                                  {isUploaded ? 'Uploaded' : 'Missing'}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-gray-400 mt-1">{description}</p>
+                              {isUploaded && receiptInfo?.fileName && (
+                                <p className="text-[11px] text-indigo-300 truncate mt-2 font-mono">
+                                  📄 {receiptInfo.fileName}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="mt-3 pt-2.5 border-t border-slate-800 flex flex-wrap items-center gap-1.5">
+                              {isUploaded && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFeeReceiptView(studyYear, account)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-lg transition-colors"
+                                  >
+                                    <Eye size={12} /> View
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFeeReceiptDownload(studyYear, account, receiptInfo?.fileName)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg transition-colors"
+                                  >
+                                    <Download size={12} /> Download
+                                  </button>
+                                </>
+                              )}
+
+                              <label className="inline-flex cursor-pointer items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors ml-auto">
+                                {isBusy ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                                {isBusy ? 'Uploading…' : isUploaded ? 'Replace' : 'Upload'}
+                                <input
+                                  type="file"
+                                  accept="application/pdf,image/jpeg,image/png"
+                                  className="sr-only"
+                                  disabled={Boolean(uploadingReceiptKey)}
+                                  onChange={(e) => {
+                                    handleFeeReceiptUpload(studyYear, account, e.target.files?.[0]);
+                                    e.target.value = '';
+                                  }}
+                                />
+                              </label>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -833,7 +994,16 @@ export default function StudentDashboard() {
           <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-600 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
               <h2 className="font-semibold text-slate-900">{previewDocument.label} preview</h2>
-              <button type="button" onClick={() => setPreviewDocument(null)} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100">Close</button>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewDocument.src}
+                  download={previewDocument.fileName || 'document'}
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 inline-flex items-center gap-1 transition-colors"
+                >
+                  <Download size={14} /> Download
+                </a>
+                <button type="button" onClick={() => setPreviewDocument(null)} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors">Close</button>
+              </div>
             </div>
             <div className="min-h-0 flex-1 overflow-auto bg-slate-100 p-3">
               {/^(data:application\/pdf|.*\.pdf(?:\?|$))/i.test(previewDocument.src) ? (

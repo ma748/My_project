@@ -32,7 +32,7 @@ const feePaymentSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now },
     academicYear: { type: String },
     studyYear: { type: Number, min: 1, max: 4 },
-    account: { type: String, enum: ['IDP A/C', 'VTU A/C', 'PD A/C'], default: 'PD A/C' },
+    account: { type: String, enum: ['IDP A/C', 'VTU A/C', 'PD A/C', 'KEA A/C', 'KEA'], default: 'PD A/C' },
     transactionId: { type: String },
     receiptNumber: { type: String },
     paymentMode: { type: String },
@@ -42,7 +42,7 @@ const feePaymentSchema = new mongoose.Schema({
     receiptData: { type: String }
   }],
   accountReceipts: [{
-    account: { type: String, enum: ['IDP A/C', 'VTU A/C', 'PD A/C'], required: true },
+    account: { type: String, enum: ['IDP A/C', 'VTU A/C', 'PD A/C', 'KEA A/C', 'KEA'], required: true },
     receiptFileName: { type: String },
     receiptMimeType: { type: String },
     receiptData: { type: String }
