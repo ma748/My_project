@@ -1,8 +1,63 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const net = require('net');
 
-const projectRoot = __dirname.replace(/server$/, '');
+const projectRoot = path.resolve(__dirname, '..');
+
+function checkPort(port, host = '127.0.0.1') {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(800);
+    socket.on('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.on('error', () => {
+      resolve(false);
+    });
+    socket.connect(port, host);
+  });
+}
+
+async function ensureMongo() {
+  const isRunning = await checkPort(27017);
+  if (isRunning) {
+    console.log('[mongo] MongoDB daemon is active on port 27017.');
+    return;
+  }
+
+  const mongodCandidates = [
+    'C:\\Program Files\\MongoDB\\Server\\8.2\\bin\\mongod.exe',
+    'C:\\Program Files\\MongoDB\\Server\\8.0\\bin\\mongod.exe',
+    'C:\\Program Files\\MongoDB\\Server\\7.0\\bin\\mongod.exe',
+    'C:\\Program Files\\MongoDB\\Server\\6.0\\bin\\mongod.exe',
+    'C:\\Program Files\\MongoDB\\Server\\5.0\\bin\\mongod.exe',
+    'C:\\Program Files\\MongoDB\\Server\\4.4\\bin\\mongod.exe'
+  ];
+
+  const mongodExe = mongodCandidates.find((p) => fs.existsSync(p)) || 'mongod';
+  const dbPath = 'C:\\mongodb-data\\db';
+  const logPath = 'C:\\mongodb-data\\log\\mongod.log';
+
+  try {
+    if (!fs.existsSync(dbPath)) fs.mkdirSync(dbPath, { recursive: true });
+    if (!fs.existsSync(path.dirname(logPath))) fs.mkdirSync(path.dirname(logPath), { recursive: true });
+
+    console.log(`[mongo] Automatically starting local MongoDB instance (${dbPath})...`);
+    const mongoProcess = spawn(mongodExe, ['--dbpath', dbPath, '--logpath', logPath, '--bind_ip', '127.0.0.1'], {
+      detached: true,
+      stdio: 'ignore'
+    });
+    mongoProcess.unref();
+  } catch (err) {
+    console.warn('[mongo] Could not start local mongod automatically:', err.message);
+  }
+}
 
 function resolvePythonCommand() {
   const venvCandidates = [
@@ -23,7 +78,7 @@ function start(command, args, name) {
   const child = spawn(command, args, {
     cwd: projectRoot,
     stdio: 'inherit',
-    shell: true,
+    shell: process.platform === 'win32',
     env: { ...process.env, PATH: process.env.PATH || '' }
   });
 
@@ -49,23 +104,29 @@ for (const py of pythonCandidates) {
   probe.on('error', () => {});
 }
 
-setTimeout(() => {
-  const vite = start('npx', ['vite', '--host'], 'vite');
-  const api = start('node', ['--watch', 'server/index.js'], 'api');
+async function boot() {
+  await ensureMongo();
 
-  if (pythonAvailable) {
-    const pythonCommand = resolvePythonCommand();
-    start(pythonCommand, ['server/face_service.py'], 'face');
-  } else {
-    console.warn('[face] Python not found. Face recognition service skipped. Install Python to enable face matching.');
-  }
+  setTimeout(() => {
+    const vite = start('npx', ['vite', '--host'], 'vite');
+    const api = start('node', ['--watch', 'server/index.js'], 'api');
 
-  const shutdown = () => {
-    vite.kill();
-    api.kill();
-    process.exit(0);
-  };
+    if (pythonAvailable) {
+      const pythonCommand = resolvePythonCommand();
+      start(pythonCommand, ['server/face_service.py'], 'face');
+    } else {
+      console.warn('[face] Python not found. Face recognition service skipped. Install Python to enable face matching.');
+    }
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
-}, 500);
+    const shutdown = () => {
+      vite.kill();
+      api.kill();
+      process.exit(0);
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+  }, 500);
+}
+
+boot();
