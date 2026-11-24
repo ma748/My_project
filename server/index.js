@@ -58,6 +58,16 @@ const isAdmissionFeeRecord = (payment) =>
 app.use(cors());
 app.use(express.json({ limit: '8mb' }));
 
+// Database connection check middleware for API write/read operations
+app.use('/api', (req, res, next) => {
+  if (mongoose.connection.readyState !== 1 && !req.path.startsWith('/health')) {
+    return res.status(503).json({
+      error: 'MongoDB database is not connected. Please start the MongoDB service (run "net start MongoDB" as Administrator or double-click start-mongodb.bat in the project folder).'
+    });
+  }
+  next();
+});
+
 // Connect to MongoDB
 const initializeDatabase = async () => {
   try {
