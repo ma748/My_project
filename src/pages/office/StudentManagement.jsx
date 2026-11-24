@@ -1084,10 +1084,9 @@ export default function StudentManagement() {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-450 block mb-1">USN / Student ID</label>
+                    <label className="text-[11px] font-semibold text-slate-450 block mb-1">USN / Student ID (Optional)</label>
                     <input
                       type="text"
-                      required
                       value={formData.studentId}
                       onChange={(e) => setFormData(prev => ({ ...prev, studentId: e.target.value.toUpperCase() }))}
                       placeholder="e.g. 2026CS001"
@@ -1095,15 +1094,13 @@ export default function StudentManagement() {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-450 block mb-1">Admission Number *</label>
+                    <label className="text-[11px] font-semibold text-slate-450 block mb-1">Admission Number (Optional)</label>
                     <input
                       type="text"
-                      required
-                      disabled={!showAddModal}
                       value={formData.admissionNumber}
                       onChange={(e) => setFormData(prev => ({ ...prev, admissionNumber: e.target.value.toUpperCase() }))}
                       placeholder="e.g. ADM202600001"
-                      className="w-full px-3 py-2 bg-slate-950/50 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                      className="w-full px-3 py-2 bg-slate-950/50 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-blue-500"
                     />
                   </div>
                   <div>

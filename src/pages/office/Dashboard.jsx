@@ -189,8 +189,6 @@ export default function OfficeDashboard() {
 
   return (
     <div className={`flex h-screen font-sans overflow-hidden ${isDarkMode ? 'bg-[#0b0f19] text-slate-200' : 'bg-slate-100 text-slate-800'}`}>
-      <Toaster position="top-right" />
-
       {/* Sidebar for Desktop */}
       <div className={`w-68 border-r backdrop-blur-xl flex flex-col justify-between hidden lg:flex z-20 shadow-2xl transition-colors duration-200 ${
         isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'

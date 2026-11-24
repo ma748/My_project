@@ -36,7 +36,18 @@ const studentSchema = new mongoose.Schema({
     feeCollectedVtu: { type: Number, default: 0, min: 0 },
     feeCollectedPd: { type: Number, default: 0, min: 0 },
     percentage: { type: Number },
+    pucCollegeName: { type: String },
+    pucBoard: { type: String },
+    pucRegNumber: { type: String },
+    pucPassingYear: { type: Number },
+    pucMarks: { type: Number },
+    pucPercentage: { type: Number },
+    diplomaCollegeName: { type: String },
+    diplomaBoard: { type: String },
+    diplomaRegNumber: { type: String },
+    diplomaPassingYear: { type: Number },
     diplomaMarks: { type: Number },
+    diplomaPercentage: { type: Number },
     lateralEntry: { type: String, default: 'No' },
     distance: { type: Number },
   },
@@ -65,8 +76,9 @@ const studentSchema = new mongoose.Schema({
     faceEmbedding: { type: [Number] },
     faceImages: [{ type: String }]
   },
-  admissionNumber: { type: String, unique: true, sparse: true },
+  admissionNumber: { type: String, unique: true, sparse: true, index: true },
   studentId: { type: String, unique: true, sparse: true, index: true },
+  usn: { type: String, unique: true, sparse: true, index: true },
   admissionType: { type: String, enum: ['Regular', 'Lateral Entry'], default: 'Regular', index: true },
   // Lateral-entry specific information belongs to the same permanent student record.
   lateralEntryDetails: {
@@ -162,12 +174,20 @@ studentSchema.index({ 'academicDetails.branch': 1, currentStudyYear: 1 });
 studentSchema.index({ approvalStatus: 1, admissionType: 1 });
 studentSchema.index({ 'personalDetails.studentName': 1 });
 studentSchema.index({ 'personalDetails.cetNumber': 1 });
+studentSchema.index({ 'personalDetails.aadhaarNumber': 1 });
+studentSchema.index({ admissionNumber: 1 });
+studentSchema.index({ studentId: 1 });
+studentSchema.index({ usn: 1 });
 studentSchema.index({ 'feeStatus.currentYear': 1 });
 studentSchema.index({ admissionBatch: 1 });
 studentSchema.index({ createdAt: -1 });
 
-// Pre-save hook to automatically hash password before saving to DB
+// Pre-save hook to automatically hash password before saving to DB and sanitize empty sparse identifiers
 studentSchema.pre('save', async function() {
+  if (typeof this.studentId === 'string' && !this.studentId.trim()) this.studentId = undefined;
+  if (typeof this.admissionNumber === 'string' && !this.admissionNumber.trim()) this.admissionNumber = undefined;
+  if (typeof this.usn === 'string' && !this.usn.trim()) this.usn = undefined;
+
   if (!this.isModified('securityDetails.password')) {
     return;
   }

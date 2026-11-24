@@ -2048,7 +2048,8 @@ app.get('/api/office/students', verifyToken, async (req, res) => {
         { 'familyDetails.parentContact': { $regex: search, $options: 'i' } },
         { 'academicDetails.branch': { $regex: search, $options: 'i' } },
         { admissionNumber: { $regex: search, $options: 'i' } },
-        { studentId: { $regex: search, $options: 'i' } }
+        { studentId: { $regex: search, $options: 'i' } },
+        { usn: { $regex: search, $options: 'i' } }
       ];
 
       const numericSearch = Number(search);
@@ -2075,19 +2076,22 @@ app.get('/api/office/students', verifyToken, async (req, res) => {
     }
 
     let list = [];
+    let hasDbError = false;
     try {
       list = await Student.find(query)
         .select('-securityDetails.password -securityDetails.faceEmbedding -securityDetails.faceImageBase64 -securityDetails.faceImages -documents -lateralEntryDetails.documents')
+        .sort({ createdAt: -1 })
         .lean();
       list = list.map((plainStudent) => {
         plainStudent.faceRegistered = Boolean(plainStudent.faceRegistered);
         return plainStudent;
       });
     } catch (dbErr) {
+      hasDbError = true;
       console.warn('MongoDB Student query error, using fallback mock list:', dbErr.message);
     }
 
-    if (!list || list.length === 0) {
+    if (hasDbError && (!list || list.length === 0)) {
       list = students.map((s, idx) => ({
         _id: s.id || `mock_${idx + 1}`,
         studentId: s.studentId || `2026CS00${idx + 1}`,
@@ -2151,16 +2155,13 @@ app.post('/api/office/students', verifyToken, async (req, res) => {
     }
 
     const { personalDetails, familyDetails, academicDetails, contactDetails, documents } = req.body;
-    const customStudentId = String(req.body.studentId || req.body.usn || '').trim();
-    const customAdmissionNumber = String(req.body.admissionNumber || '').trim().toUpperCase();
-    if (!customStudentId) {
-      return res.status(400).json({ error: 'Student ID / USN is required' });
-    }
-    if (!customAdmissionNumber) {
-      return res.status(400).json({ error: 'Admission Number is required' });
-    }
+    const customStudentId = String(req.body.studentId || '').trim().toUpperCase() || undefined;
+    const customUsn = String(req.body.usn || '').trim().toUpperCase() || undefined;
+    const customAdmissionNumber = String(req.body.admissionNumber || '').trim().toUpperCase() || undefined;
+
     const orConditions = [];
     if (customStudentId) orConditions.push({ studentId: customStudentId });
+    if (customUsn) orConditions.push({ usn: customUsn });
     if (customAdmissionNumber) orConditions.push({ admissionNumber: customAdmissionNumber });
     if (personalDetails?.cetNumber) orConditions.push({ 'personalDetails.cetNumber': personalDetails.cetNumber });
     if (personalDetails?.aadhaarNumber) orConditions.push({ 'personalDetails.aadhaarNumber': personalDetails.aadhaarNumber });
@@ -2169,7 +2170,7 @@ app.post('/api/office/students', verifyToken, async (req, res) => {
     if (orConditions.length > 0) {
       const existing = await Student.findOne({ $or: orConditions });
       if (existing) {
-        return res.status(400).json({ error: 'A student with this Student ID, Admission Number, CET, Aadhaar, or Email already exists.' });
+        return res.status(400).json({ error: 'A student with this Student ID, USN, Admission Number, CET, Aadhaar, or Email already exists.' });
       }
     }
 
@@ -2196,6 +2197,7 @@ app.post('/api/office/students', verifyToken, async (req, res) => {
 
     const newStudent = new Student({
       studentId: customStudentId,
+      usn: customUsn,
       admissionNumber: customAdmissionNumber,
       personalDetails,
       familyDetails,
@@ -2464,6 +2466,52 @@ app.put('/api/office/students/:id', verifyToken, async (req, res) => {
     if (req.body.admissionQuota) student.admissionQuota = req.body.admissionQuota;
     if (req.body.section) student.section = req.body.section;
     if (req.body.semester) student.semester = Number(req.body.semester);
+
+    // Allow assigning official identifiers later
+    if (req.body.studentId !== undefined) {
+      const sid = String(req.body.studentId || '').trim();
+      if (sid) {
+        const dup = await Student.findOne({ studentId: sid.toUpperCase(), _id: { $ne: student._id } });
+        if (dup) return res.status(400).json({ error: 'Student ID is already in use by another student.' });
+        student.studentId = sid.toUpperCase();
+      } else {
+        student.studentId = undefined;
+      }
+    }
+
+    if (req.body.admissionNumber !== undefined) {
+      const adm = String(req.body.admissionNumber || '').trim();
+      if (adm) {
+        const dup = await Student.findOne({ admissionNumber: adm.toUpperCase(), _id: { $ne: student._id } });
+        if (dup) return res.status(400).json({ error: 'Admission Number is already in use by another student.' });
+        student.admissionNumber = adm.toUpperCase();
+      } else {
+        student.admissionNumber = undefined;
+      }
+    }
+
+    if (req.body.usn !== undefined) {
+      const usn = String(req.body.usn || '').trim();
+      if (usn) {
+        const dup = await Student.findOne({ usn: usn.toUpperCase(), _id: { $ne: student._id } });
+        if (dup) return res.status(400).json({ error: 'USN is already in use by another student.' });
+        student.usn = usn.toUpperCase();
+      } else {
+        student.usn = undefined;
+      }
+    }
+
+    if (student.admissionType === 'Lateral Entry' && academicDetails) {
+      student.lateralEntryDetails = {
+        ...student.lateralEntryDetails?.toObject?.(),
+        diplomaBoard: academicDetails.diplomaBoard || academicDetails.board || student.lateralEntryDetails?.diplomaBoard,
+        diplomaState: academicDetails.state || student.lateralEntryDetails?.diplomaState,
+        diplomaTotalMarks: academicDetails.diplomaMarks !== undefined ? Number(academicDetails.diplomaMarks) : student.lateralEntryDetails?.diplomaTotalMarks,
+        diplomaPercentage: academicDetails.diplomaPercentage !== undefined ? Number(academicDetails.diplomaPercentage) : student.lateralEntryDetails?.diplomaPercentage,
+        previousInstitution: academicDetails.diplomaCollegeName || academicDetails.collegeName || student.lateralEntryDetails?.previousInstitution
+      };
+    }
+
     if (req.body.currentStudyYear || academicDetails?.year) {
       const yr = Number(req.body.currentStudyYear || academicDetails?.year);
       student.currentStudyYear = yr;
@@ -2833,29 +2881,33 @@ app.post('/api/office/admissions/new', verifyToken, async (req, res) => {
       return res.status(403).json({ error: 'Access Denied: Office role required' });
     }
 
-    const { personalDetails, familyDetails, academicDetails, contactDetails, admissionType = 'Regular', admissionBatch } = req.body;
-    const studentId = String(req.body.studentId || req.body.usn || '').trim().toUpperCase();
-    const admissionNumber = String(req.body.admissionNumber || '').trim().toUpperCase();
-    if (!studentId) {
-      return res.status(400).json({ error: 'Student ID / USN is required' });
-    }
-    if (!admissionNumber) {
-      return res.status(400).json({ error: 'Admission Number is required' });
-    }
-    
-    // Check for existing CET/Aadhar
-    const existing = await Student.findOne({ 
-      $or: [
-        { studentId },
-        { admissionNumber },
-        { 'personalDetails.cetNumber': personalDetails.cetNumber },
-        { 'personalDetails.aadhaarNumber': personalDetails.aadhaarNumber },
-        { 'contactDetails.email': contactDetails.email }
-      ]
-    }) || await LateralEntryStudent.findOne({ studentId });
+    const { personalDetails = {}, familyDetails = {}, academicDetails = {}, contactDetails = {}, admissionBatch } = req.body;
+    const admissionType = String(req.body.admissionType || '').toLowerCase().includes('lateral') ? 'Lateral Entry' : 'Regular';
+    const studentId = String(req.body.studentId || '').trim().toUpperCase() || undefined;
+    const usn = String(req.body.usn || '').trim().toUpperCase() || undefined;
+    const admissionNumber = String(req.body.admissionNumber || '').trim().toUpperCase() || undefined;
 
-    if (existing) {
-      return res.status(400).json({ error: 'A student with this Student ID, Admission Number, CET Number, Aadhaar, or Email already exists.' });
+    // Check for collisions only on non-empty unique fields
+    const orConditions = [];
+    if (studentId) orConditions.push({ studentId });
+    if (admissionNumber) orConditions.push({ admissionNumber });
+    if (usn) orConditions.push({ usn });
+    if (personalDetails.cetNumber) orConditions.push({ 'personalDetails.cetNumber': personalDetails.cetNumber });
+    if (personalDetails.aadhaarNumber) orConditions.push({ 'personalDetails.aadhaarNumber': personalDetails.aadhaarNumber });
+    if (contactDetails.email) orConditions.push({ 'contactDetails.email': contactDetails.email });
+
+    if (orConditions.length > 0) {
+      const existing = await Student.findOne({ $or: orConditions });
+      if (existing) {
+        let field = 'identifier';
+        if (studentId && existing.studentId === studentId) field = 'Student ID';
+        else if (admissionNumber && existing.admissionNumber === admissionNumber) field = 'Admission Number';
+        else if (usn && existing.usn === usn) field = 'USN';
+        else if (personalDetails.cetNumber && existing.personalDetails?.cetNumber === personalDetails.cetNumber) field = 'CET Number';
+        else if (personalDetails.aadhaarNumber && existing.personalDetails?.aadhaarNumber === personalDetails.aadhaarNumber) field = 'Aadhaar Number';
+        else if (contactDetails.email && existing.contactDetails?.email === contactDetails.email) field = 'Email';
+        return res.status(400).json({ error: `A student with this ${field} already exists.` });
+      }
     }
 
     const batchYear = Number(admissionBatch) || new Date().getFullYear();
@@ -2863,11 +2915,17 @@ app.post('/api/office/admissions/new', verifyToken, async (req, res) => {
     const newStudent = new Student({
       personalDetails,
       familyDetails,
-      academicDetails,
+      academicDetails: {
+        ...academicDetails,
+        year: initialStudyYear,
+        lateralEntry: admissionType === 'Lateral Entry' ? 'Yes' : (academicDetails.lateralEntry || 'No')
+      },
       contactDetails,
       studentId,
       admissionNumber,
-      admissionType: admissionType === 'Lateral Entry' ? 'Lateral Entry' : 'Regular',
+      usn,
+      admissionType,
+      admissionQuota: req.body.admissionQuota || (admissionType === 'Lateral Entry' ? 'Lateral Entry' : 'CET'),
       admissionBatch: batchYear,
       currentAcademicYear: `${batchYear}-${batchYear + 1}`,
       currentStudyYear: initialStudyYear,
@@ -2881,6 +2939,17 @@ app.post('/api/office/admissions/new', verifyToken, async (req, res) => {
         securityAnswer: 'Default Answer'
       }
     });
+
+    if (admissionType === 'Lateral Entry') {
+      newStudent.lateralEntryDetails = {
+        joiningSemester: (initialStudyYear * 2) - 1,
+        diplomaBoard: academicDetails.diplomaBoard || academicDetails.board,
+        diplomaState: academicDetails.state,
+        diplomaTotalMarks: Number(academicDetails.diplomaMarks) || 0,
+        diplomaPercentage: Number(academicDetails.diplomaPercentage) || 0,
+        previousInstitution: academicDetails.diplomaCollegeName || academicDetails.collegeName
+      };
+    }
 
     await newStudent.save();
     res.status(201).json({ message: 'Admission application created successfully!', student: newStudent });
@@ -4515,7 +4584,7 @@ app.post('/api/office/face/register/:id', verifyToken, async (req, res) => {
     let embedding = [];
     try {
       const extractionPayload = image ? { image } : { virtualSeed: seed };
-      const pyResponse = await axios.post('http://localhost:5001/extract', extractionPayload, { timeout: 30000 });
+      const pyResponse = await axios.post('http://localhost:5001/extract', extractionPayload, { timeout: 3500 });
       if (!pyResponse.data.embedding?.length) {
         throw new Error(pyResponse.data.error || 'No face detected. Center the student face and try again.');
       }
@@ -4539,9 +4608,23 @@ app.post('/api/office/face/register/:id', verifyToken, async (req, res) => {
     student.faceRegistered = true;
 
     await student.save();
+
+    const authUpdate = {
+      studentRef: student._id,
+      embedding,
+      isActive: true,
+      registeredAt: new Date()
+    };
+    const updateOps = { $set: authUpdate };
+    if (student.studentId) {
+      authUpdate.studentId = student.studentId;
+    } else {
+      updateOps.$unset = { studentId: 1 };
+    }
+
     await FaceAuthentication.findOneAndUpdate(
       { studentRef: student._id },
-      { studentId: student.studentId, studentRef: student._id, embedding, isActive: true, registeredAt: new Date() },
+      updateOps,
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     res.json({ message: image ? 'Student face detected and registered successfully!' : 'Virtual face model registered successfully!', student: { id: student._id, studentId: student.studentId, faceRegistered: true } });

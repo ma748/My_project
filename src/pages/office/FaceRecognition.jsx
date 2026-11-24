@@ -118,7 +118,11 @@ export default function FaceRecognition() {
 
   const handleRegisterFace = async () => {
     if (!selectedStudent) {
-      toast.error('Please select a student from the directory first.');
+      toast.error('Please select a student from the directory first.', { id: 'face-select-student' });
+      return;
+    }
+    if (!capturedImage) {
+      toast.error('Please activate webcam and capture a photo snapshot before registering.', { id: 'face-capture-required' });
       return;
     }
     setProcessing(true);
@@ -127,7 +131,7 @@ export default function FaceRecognition() {
       const studentIdParam = selectedStudent._id || selectedStudent.id || selectedStudent.studentId;
       const seed = selectedStudent.studentId || selectedStudent.personalDetails?.cetNumber || studentIdParam;
       const payload = {
-        ...(capturedImage ? { image: capturedImage } : {}),
+        image: capturedImage,
         ...(seed ? { virtualSeed: seed } : {})
       };
 
@@ -140,13 +144,13 @@ export default function FaceRecognition() {
           ? { ...student, faceRegistered: Boolean(response.data.student?.faceRegistered) }
           : student
       )));
-      toast.success(response.data.message || 'Face signature registered in dataset successfully!');
+      toast.success(response.data.message || 'Face signature registered in dataset successfully!', { id: 'face-register-status' });
       setCapturedImage(null);
       setVirtualSeed(seed);
       setSelectedStudent((currentStudent) => currentStudent ? { ...currentStudent, faceRegistered: true } : currentStudent);
       fetchStudents(); // Refresh student biometric badges
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to extract face signature');
+      toast.error(err.response?.data?.error || 'Failed to extract face signature. Please center the face and try again.', { id: 'face-register-status' });
     } finally {
       setProcessing(false);
     }
