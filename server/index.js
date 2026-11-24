@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { users, students } = require('./db');
 const PDFDocument = require('pdfkit');
@@ -58,15 +59,36 @@ const isAdmissionFeeRecord = (payment) =>
 app.use(cors());
 app.use(express.json({ limit: '8mb' }));
 
-// Database connection check middleware for API write/read operations
-app.use('/api', (req, res, next) => {
-  if (mongoose.connection.readyState !== 1 && !req.path.startsWith('/health')) {
-    return res.status(503).json({
-      error: 'MongoDB database is not connected. Please start the MongoDB service (run "net start MongoDB" as Administrator or double-click start-mongodb.bat in the project folder).'
-    });
+// Offline local file-based database store for development fallback when MongoDB daemon is unavailable
+const OFFLINE_STUDENTS_FILE = path.join(__dirname, 'data', 'offline_students.json');
+
+const loadOfflineStudents = () => {
+  try {
+    if (!fs.existsSync(path.dirname(OFFLINE_STUDENTS_FILE))) {
+      fs.mkdirSync(path.dirname(OFFLINE_STUDENTS_FILE), { recursive: true });
+    }
+    if (fs.existsSync(OFFLINE_STUDENTS_FILE)) {
+      const data = fs.readFileSync(OFFLINE_STUDENTS_FILE, 'utf8');
+      return JSON.parse(data || '[]');
+    }
+  } catch (err) {
+    console.warn('Failed to read offline students file:', err.message);
   }
-  next();
-});
+  return [];
+};
+
+const saveOfflineStudents = (list) => {
+  try {
+    if (!fs.existsSync(path.dirname(OFFLINE_STUDENTS_FILE))) {
+      fs.mkdirSync(path.dirname(OFFLINE_STUDENTS_FILE), { recursive: true });
+    }
+    fs.writeFileSync(OFFLINE_STUDENTS_FILE, JSON.stringify(list, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('Failed to write offline students file:', err.message);
+  }
+};
+
+let offlineStudents = loadOfflineStudents();
 
 // Connect to MongoDB
 const initializeDatabase = async () => {
@@ -2102,7 +2124,7 @@ app.get('/api/office/students', verifyToken, async (req, res) => {
     }
 
     if (hasDbError && (!list || list.length === 0)) {
-      list = students.map((s, idx) => ({
+      const mockList = students.map((s, idx) => ({
         _id: s.id || `mock_${idx + 1}`,
         studentId: s.studentId || `2026CS00${idx + 1}`,
         admissionNumber: `GECM/2026/${(s.course || 'CSE').slice(0, 2).toUpperCase()}/00${idx + 1}`,
@@ -2148,6 +2170,32 @@ app.get('/api/office/students', verifyToken, async (req, res) => {
         },
         faceRegistered: Boolean(s.faceRegistered)
       }));
+
+      list = [...offlineStudents, ...mockList];
+      if (q) {
+        list = list.filter((s) => {
+          const vals = [
+            s.admissionNumber,
+            s.studentId,
+            s.usn,
+            s.personalDetails?.cetNumber,
+            s.personalDetails?.studentName,
+            s.personalDetails?.aadhaarNumber,
+            s.contactDetails?.studentContact,
+            s.familyDetails?.parentContact,
+            s.contactDetails?.email,
+            s.academicDetails?.branch,
+            s.admissionType
+          ];
+          return vals.some((v) => String(v || '').toLowerCase().includes(q));
+        });
+      }
+      if (branch && branch !== 'All') {
+        list = list.filter((s) => (s.academicDetails?.branch || '').toUpperCase() === branch.toUpperCase());
+      }
+      if (year && year !== 'All') {
+        list = list.filter((s) => Number(s.academicDetails?.year || s.currentStudyYear) === Number(year));
+      }
     }
 
     res.json(list);
@@ -2460,6 +2508,25 @@ app.put('/api/office/students/:id', verifyToken, async (req, res) => {
     }
 
     const { personalDetails, familyDetails, academicDetails, contactDetails, documents } = req.body;
+
+    if (mongoose.connection.readyState !== 1) {
+      const idx = offlineStudents.findIndex(s => s._id === req.params.id || s.id === req.params.id || s.studentId === req.params.id);
+      if (idx !== -1) {
+        const student = offlineStudents[idx];
+        if (personalDetails) student.personalDetails = { ...student.personalDetails, ...personalDetails };
+        if (familyDetails) student.familyDetails = { ...student.familyDetails, ...familyDetails };
+        if (academicDetails) student.academicDetails = { ...student.academicDetails, ...academicDetails };
+        if (contactDetails) student.contactDetails = { ...student.contactDetails, ...contactDetails };
+        if (documents) student.documents = { ...student.documents, ...documents };
+        if (req.body.admissionType) student.admissionType = req.body.admissionType;
+        if (req.body.studentId !== undefined) student.studentId = String(req.body.studentId || '').trim().toUpperCase() || undefined;
+        if (req.body.admissionNumber !== undefined) student.admissionNumber = String(req.body.admissionNumber || '').trim().toUpperCase() || undefined;
+        if (req.body.usn !== undefined) student.usn = String(req.body.usn || '').trim().toUpperCase() || undefined;
+        offlineStudents[idx] = student;
+        saveOfflineStudents(offlineStudents);
+        return res.json({ message: 'Student updated successfully!', student });
+      }
+    }
 
     const student = await Student.findById(req.params.id);
     if (!student) {
@@ -2905,6 +2972,76 @@ app.post('/api/office/admissions/new', verifyToken, async (req, res) => {
     if (personalDetails.cetNumber) orConditions.push({ 'personalDetails.cetNumber': personalDetails.cetNumber });
     if (personalDetails.aadhaarNumber) orConditions.push({ 'personalDetails.aadhaarNumber': personalDetails.aadhaarNumber });
     if (contactDetails.email) orConditions.push({ 'contactDetails.email': contactDetails.email });
+
+    if (mongoose.connection.readyState !== 1) {
+      if (orConditions.length > 0) {
+        const existing = offlineStudents.find((s) => {
+          return (
+            (studentId && s.studentId === studentId) ||
+            (admissionNumber && s.admissionNumber === admissionNumber) ||
+            (usn && s.usn === usn) ||
+            (personalDetails.cetNumber && s.personalDetails?.cetNumber === personalDetails.cetNumber) ||
+            (personalDetails.aadhaarNumber && s.personalDetails?.aadhaarNumber === personalDetails.aadhaarNumber) ||
+            (contactDetails.email && s.contactDetails?.email === contactDetails.email)
+          );
+        });
+        if (existing) {
+          return res.status(400).json({ error: 'A student with this identifier already exists in saved records.' });
+        }
+      }
+
+      const batchYear = Number(admissionBatch) || new Date().getFullYear();
+      const initialStudyYear = admissionType === 'Lateral Entry' ? (Number(academicDetails.year) || 2) : 1;
+      const offlineId = new mongoose.Types.ObjectId().toString();
+      const offlineDoc = {
+        _id: offlineId,
+        id: offlineId,
+        personalDetails,
+        familyDetails,
+        academicDetails: {
+          ...academicDetails,
+          year: initialStudyYear,
+          lateralEntry: admissionType === 'Lateral Entry' ? 'Yes' : (academicDetails.lateralEntry || 'No')
+        },
+        contactDetails,
+        studentId,
+        admissionNumber,
+        usn,
+        admissionType,
+        admissionQuota: req.body.admissionQuota || (admissionType === 'Lateral Entry' ? 'Lateral Entry' : 'CET'),
+        admissionBatch: batchYear,
+        currentAcademicYear: `${batchYear}-${batchYear + 1}`,
+        currentStudyYear: initialStudyYear,
+        semester: (initialStudyYear * 2) - 1,
+        approvalStatus: 'Pending',
+        createdAt: new Date().toISOString(),
+        securityDetails: {
+          emailForOtp: contactDetails.email,
+          emailOtp: 'VERIFIED',
+          password: 'Password@123',
+          securityQuestion: 'Default Question',
+          securityAnswer: 'Default Answer'
+        }
+      };
+
+      if (admissionType === 'Lateral Entry') {
+        offlineDoc.lateralEntryDetails = {
+          joiningSemester: (initialStudyYear * 2) - 1,
+          diplomaBoard: academicDetails.diplomaBoard || academicDetails.board,
+          diplomaState: academicDetails.state,
+          diplomaTotalMarks: Number(academicDetails.diplomaMarks) || 0,
+          diplomaPercentage: Number(academicDetails.diplomaPercentage) || 0,
+          previousInstitution: academicDetails.diplomaCollegeName || academicDetails.collegeName
+        };
+      }
+
+      offlineStudents.unshift(offlineDoc);
+      saveOfflineStudents(offlineStudents);
+      return res.status(201).json({
+        message: 'Admission application created successfully!',
+        student: offlineDoc
+      });
+    }
 
     if (orConditions.length > 0) {
       const existing = await Student.findOne({ $or: orConditions });
@@ -4577,6 +4714,19 @@ app.post('/api/office/face/register/:id', verifyToken, async (req, res) => {
     }
 
     const { image, virtualSeed } = req.body;
+
+    if (mongoose.connection.readyState !== 1) {
+      let student = offlineStudents.find(s => s._id === req.params.id || s.id === req.params.id || s.studentId === req.params.id || s.admissionNumber === req.params.id);
+      if (!student) {
+        student = students.find(s => s.id === req.params.id || s.studentId === req.params.id);
+      }
+      if (student) {
+        student.faceRegistered = true;
+        saveOfflineStudents(offlineStudents);
+        return res.json({ message: 'Student face registered successfully (offline mode)!', student: { id: student._id || student.id, faceRegistered: true } });
+      }
+    }
+
     const isObjectId = mongoose.Types.ObjectId.isValid(req.params.id);
     const student = await Student.findOne(
       isObjectId
