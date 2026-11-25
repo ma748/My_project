@@ -135,7 +135,7 @@ export function LoginModule() {
       <header className="w-full px-4 sm:px-8 py-3 sm:py-5 flex items-center justify-between z-20">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs sm:text-sm font-semibold text-slate-300 hover:text-white backdrop-blur-md transition-all active:scale-95"
+          className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-300 dark:border-white/10 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white backdrop-blur-md transition-all active:scale-95"
         >
           <ArrowLeft size={16} />
           <span>Back to Roles</span>
@@ -147,24 +147,24 @@ export function LoginModule() {
       {/* Main Login Form Card */}
       <main className="flex-1 flex items-center justify-center px-4 py-6 sm:py-10 z-10">
         <div className="w-full max-w-sm sm:max-w-md mx-auto">
-          <Card className={`relative overflow-hidden specular-border-top border border-white/10 ${config.borderGlow} p-5 sm:p-8 backdrop-blur-2xl`}>
+          <Card className={`relative overflow-hidden specular-border-top border border-slate-200 dark:border-white/10 ${config.borderGlow} p-5 sm:p-8 backdrop-blur-2xl`}>
             
             {/* Header info */}
             <div className="text-center mb-6 sm:mb-8">
               <div className="inline-flex items-center gap-2 mb-3">
-                <span className="nothing-pill text-[9px] font-mono text-slate-400">
+                <span className="nothing-pill text-[9px] font-mono text-slate-500 dark:text-slate-400">
                   {config.badge} // AUTH
                 </span>
               </div>
 
-              <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl mx-auto flex items-center justify-center bg-white/5 border border-white/10 mb-3 sm:mb-4 shadow-inner">
+              <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl mx-auto flex items-center justify-center bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 mb-3 sm:mb-4 shadow-inner">
                 <RoleIcon size={24} style={{ color: config.color }} />
               </div>
 
-              <h2 className="text-lg sm:text-2xl font-black text-slate-100 tracking-tight">
+              <h2 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
                 {config.title}
               </h2>
-              <p className="text-[11px] sm:text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+              <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-xs mx-auto">
                 {config.desc}
               </p>
             </div>

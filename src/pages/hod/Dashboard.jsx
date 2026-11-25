@@ -4,6 +4,7 @@ import { Home, Users, LogOut } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import axios from 'axios';
 import { clearSessionStorage } from '../../utils/authStorage';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -108,9 +109,10 @@ export default function Dashboard() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
         <header className="h-16 border-b border-slate-700/50 bg-[#1e293b]/40 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-10 w-full transition-all">
-            <h1 className="text-xl font-semibold text-emerald-400">
+          <h1 className="text-xl font-semibold text-emerald-400">
             {location.pathname === '/dashboard/hod' ? 'Dashboard Home' : 'Student Management'}
           </h1>
+          <ThemeToggle />
         </header>
         
         <main className="flex-1 overflow-auto p-6 md:p-8 custom-scrollbar">

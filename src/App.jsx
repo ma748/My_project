@@ -42,7 +42,13 @@ if (typeof window !== 'undefined' && !window.__toastDeduplicated) {
 
 function App() {
   const location = useLocation();
-  const hasLocalThemeControl = location.pathname.startsWith('/dashboard/office') || location.pathname.startsWith('/dashboard/principal');
+  const hasLocalThemeControl = 
+    location.pathname === '/' ||
+    location.pathname.startsWith('/login') ||
+    location.pathname.startsWith('/dashboard/office') || 
+    location.pathname.startsWith('/dashboard/principal') ||
+    location.pathname.startsWith('/dashboard/hod') ||
+    location.pathname.startsWith('/dashboard/student');
 
   return (
     <>

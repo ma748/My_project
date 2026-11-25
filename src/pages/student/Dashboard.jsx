@@ -6,6 +6,7 @@ import { LogOut, Home, FileText, CheckCircle, CreditCard, Download, Shield, Load
 import toast from 'react-hot-toast';
 import FeeStructure from '../FeeStructure';
 import { clearSessionStorage } from '../../utils/authStorage';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
@@ -963,8 +964,11 @@ export default function StudentDashboard() {
           <h1 className="text-lg font-semibold text-white capitalize leading-none tracking-wide">
             {activeTab.replace('-', ' ')}
           </h1>
-          <div className="text-sm font-medium text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
-            Session Active
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <div className="text-sm font-medium text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
+              Session Active
+            </div>
           </div>
         </header>
 
