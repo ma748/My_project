@@ -75,7 +75,8 @@ function resolvePythonCommand() {
 }
 
 function start(command, args, name) {
-  const child = spawn(command, args, {
+  const cmdToRun = process.platform === 'win32' && command.includes(' ') && !command.startsWith('"') ? `"${command}"` : command;
+  const child = spawn(cmdToRun, args, {
     cwd: projectRoot,
     stdio: 'inherit',
     shell: process.platform === 'win32',
@@ -95,7 +96,8 @@ const pythonCandidates = [resolvePythonCommand(), 'python', 'python3'];
 let pythonAvailable = false;
 
 for (const py of pythonCandidates) {
-  const probe = spawn(py, ['--version'], { stdio: 'ignore', shell: true });
+  const pyCmd = process.platform === 'win32' && py.includes(' ') && !py.startsWith('"') ? `"${py}"` : py;
+  const probe = spawn(pyCmd, ['--version'], { stdio: 'ignore', shell: true });
   probe.on('exit', (code) => {
     if (code === 0) {
       pythonAvailable = true;
